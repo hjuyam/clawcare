@@ -4,7 +4,7 @@ test.describe("core pages (mock gateway)", () => {
   test("home shows capabilities", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByText("Capabilities")).toBeVisible();
+    await expect(page.getByText("Capabilities", { exact: true })).toBeVisible();
     await expect(page.getByText("GET /api/capabilities")).toBeVisible();
     await expect(page.getByText("ok", { exact: true })).toBeVisible();
 
