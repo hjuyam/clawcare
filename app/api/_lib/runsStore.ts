@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import crypto from "node:crypto";
 
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "denied";
 
@@ -53,7 +54,7 @@ async function writeStore(data: StoreShape) {
 
   // Atomic-ish write: write to a temp file then rename.
   // Prevents file corruption from partial writes.
-  const tmpPath = `${RUNS_PATH}.tmp.${process.pid}`;
+  const tmpPath = `${RUNS_PATH}.tmp.${process.pid}.${crypto.randomUUID()}`;
   await fs.writeFile(tmpPath, json, "utf8");
   await fs.rename(tmpPath, RUNS_PATH);
 }
