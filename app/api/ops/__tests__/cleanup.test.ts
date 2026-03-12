@@ -14,7 +14,7 @@ describe("POST /api/ops/cleanup", () => {
 
     expect(res.status).toBe(200);
     expect(data.status).toBe("preview");
-    expect(data.dryRun).toBe(true);
+    expect(data.dry_run).toBe(true);
   });
 
   it("executes when confirm is true", async () => {
@@ -29,6 +29,6 @@ describe("POST /api/ops/cleanup", () => {
 
     expect(res.status).toBe(200);
     expect(data.status).toBe("executed");
-    expect(data.dryRun).toBe(false);
+    expect(data.dry_run).toBe(false);
   });
 });
