@@ -24,3 +24,7 @@ playwright/.cache/
 
 # misc
 .DS_Store
+
+# Playwright artifacts
+/test-results/
+/playwright-report/
