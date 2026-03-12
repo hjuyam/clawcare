@@ -33,10 +33,14 @@ test.describe("core pages (mock gateway)", () => {
     );
   });
 
-  test("config placeholder", async ({ page }) => {
+  test("config page renders", async ({ page }) => {
     await page.goto("/config");
 
     await expect(page.getByRole("heading", { name: "Config" })).toBeVisible();
+    await expect(page.getByText("运行历史")).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("link", { name: "Tasks & Runs" })
+    ).toBeVisible();
   });
 
   test("tasks page placeholder", async ({ page }) => {
