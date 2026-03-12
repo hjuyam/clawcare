@@ -19,7 +19,7 @@ const CreateRunSchema = z
   })
   .strict();
 
-export function isHighRiskRun(type: string) {
+function isHighRiskRun(type: string) {
   // 中庸拍板：凡是会改变系统状态的 ops/config 视为高危
   return [
     "ops.restart_gateway",
