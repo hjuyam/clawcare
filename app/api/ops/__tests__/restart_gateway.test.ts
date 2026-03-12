@@ -4,6 +4,11 @@ import { disableSafeMode, enableSafeMode } from "@/tests/_helpers/safeMode";
 import { authCookieHeader } from "@/tests/_helpers/auth";
 
 describe("POST /api/ops/restart_gateway", () => {
+  beforeEach(async () => {
+    // Ensure isolation: other test files may toggle Safe Mode and persist it.
+    await disableSafeMode();
+  });
+
   it("rejects without confirm", async () => {
     const headers = {
       "content-type": "application/json",
