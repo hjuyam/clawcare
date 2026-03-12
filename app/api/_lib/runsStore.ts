@@ -28,6 +28,7 @@ const RUNS_PATH = path.join(process.cwd(), "data", "runs.json");
 async function readStore(): Promise<StoreShape> {
   try {
     const raw = await fs.readFile(RUNS_PATH, "utf8");
+    if (!raw.trim()) return { runs: [] };
     const parsed = JSON.parse(raw) as StoreShape;
     if (parsed && Array.isArray(parsed.runs)) return { runs: parsed.runs };
   } catch (err: any) {
@@ -38,7 +39,8 @@ async function readStore(): Promise<StoreShape> {
 
 async function writeStore(data: StoreShape) {
   await fs.mkdir(path.dirname(RUNS_PATH), { recursive: true });
-  await fs.writeFile(RUNS_PATH, JSON.stringify(data, null, 2), "utf8");
+  const json = JSON.stringify(data, null, 2);
+  await fs.writeFile(RUNS_PATH, json, "utf8");
 }
 
 export async function listRuns(params?: { limit?: number }) {

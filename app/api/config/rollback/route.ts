@@ -1,46 +1,31 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server.js";
 import { z } from "zod";
-import {
-  loadManifest,
-  loadConfigByVersion,
-  snapshotConfig,
-} from "../_utils";
-import { jsonError, parseJsonBody } from "@/app/api/_lib/http";
+import { parseJsonBody } from "@/app/api/_lib/http";
 import { requireRole } from "@/app/api/_lib/auth";
 import { enforceSafeMode } from "@/app/api/_lib/safeMode";
+import { createAndScheduleRun } from "@/app/api/_lib/runFromRequest";
 
 const RollbackSchema = z
   .object({
+    // legacy
     target_version: z.string().optional(),
-    version: z.string().optional(),
+    // v2 (earlier work)
+    snapshot_id: z.string().optional(),
     author: z.string().optional(),
-    reason: z.string().optional(),
+    reason: z.string().min(2).optional(),
+    confirm: z.boolean().optional(),
   })
   .strict();
 
-async function emitAudit(request: Request, payload: Record<string, unknown>) {
-  const auditUrl = new URL("/api/audit/log", request.url);
-  await fetch(auditUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-}
-
 export async function POST(req: Request) {
-  const startedAt = Date.now();
   const parsed = await parseJsonBody(req, RollbackSchema);
   if (!parsed.ok) return parsed.response;
-
-  const targetVersion = parsed.data.target_version ?? parsed.data.version;
-  const author = parsed.data.author;
-  const reason = parsed.data.reason ?? `rollback to ${targetVersion}`;
 
   const auth = await requireRole(req, "admin", {
     action: "config.rollback",
     resource_type: "config",
     requestId: parsed.requestId,
-    reason,
+    reason: parsed.data.reason ?? null,
   });
   if (!auth.ok) return auth.response;
 
@@ -49,66 +34,39 @@ export async function POST(req: Request) {
     requestId: parsed.requestId,
     action: "config.rollback",
     resource_type: "config",
-    reason,
+    reason: parsed.data.reason ?? null,
     session: auth.session,
   });
   if (!safe.ok) return safe.response;
 
-  if (!targetVersion) {
-    return jsonError(
-      "VALIDATION_ERROR",
-      "target_version is required",
-      parsed.requestId,
-      400,
+  const confirm = parsed.data.confirm ?? false;
+  if (!confirm) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "CONFIRM_REQUIRED",
+          message: "Config rollback requires confirm=true",
+          requestId: parsed.requestId,
+        },
+      },
+      { status: 409 },
     );
   }
 
-  const manifest = await loadManifest();
-  const targetLoaded = await loadConfigByVersion(targetVersion);
-  if (!targetLoaded) {
-    await emitAudit(req, {
-      action: "config.rollback",
-      resource_type: "config",
-      reason,
-      status: "rejected",
-      duration_ms: Date.now() - startedAt,
-      request_id: parsed.requestId,
-      error_code: "NOT_FOUND",
-    });
-
-    return jsonError(
-      "NOT_FOUND",
-      "version not found",
-      parsed.requestId,
-      404,
-    );
-  }
-
-  const snap = await snapshotConfig(targetLoaded.config, manifest, {
-    author,
-    reason,
-  });
-
-  const selfCheck = {
-    status: "ok",
-    current_matches_target: true,
-    current_version: snap.entry.version,
-    target_version: targetVersion,
-  };
-
-  await emitAudit(req, {
-    action: "config.rollback",
-    resource_type: "config",
-    reason,
-    status: "rolled_back",
-    duration_ms: Date.now() - startedAt,
-    request_id: parsed.requestId,
+  const run = await createAndScheduleRun({
+    type: "config.rollback",
+    session: auth.session,
+    reason: parsed.data.reason ?? "(no reason provided)",
+    input: {
+      target_version: parsed.data.target_version ?? null,
+      snapshot_id: parsed.data.snapshot_id ?? null,
+      author: parsed.data.author ?? null,
+    },
   });
 
   return NextResponse.json({
-    ok: true,
-    current_version: snap.entry.version,
-    rolled_back_to: targetVersion,
-    self_check: selfCheck,
+    status: "queued",
+    mode: "mock",
+    run_id: run.id,
   });
 }

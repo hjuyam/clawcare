@@ -37,6 +37,7 @@ test.describe("M1 auth/RBAC/safe mode (contract)", () => {
         base_version: currentData.current_version,
         author: "viewer",
         reason: "should be denied",
+        confirm: true,
       },
     });
     expect([403, 409]).toContain(apply.status());
@@ -62,11 +63,13 @@ test.describe("M1 auth/RBAC/safe mode (contract)", () => {
         base_version: currentData.current_version,
         author: "admin",
         reason: "apply config",
+        confirm: true,
       },
     });
     expect(apply.status()).toBe(200);
     const applyData = await apply.json();
-    expect(typeof applyData.current_version).toBe("string");
+    expect(applyData.status).toBe("queued");
+    expect(typeof applyData.run_id).toBe("string");
   });
 
   test("safe mode blocks admin high-risk ops", async ({ page }) => {

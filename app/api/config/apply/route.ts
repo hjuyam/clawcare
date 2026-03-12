@@ -1,34 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  loadManifest,
-  loadConfigByVersion,
-  snapshotConfig,
-} from "../_utils";
-import { jsonError, parseJsonBody } from "@/app/api/_lib/http";
+import { parseJsonBody } from "@/app/api/_lib/http";
 import { requireRole } from "@/app/api/_lib/auth";
 import { enforceSafeMode } from "@/app/api/_lib/safeMode";
+import { createAndScheduleRun } from "@/app/api/_lib/runFromRequest";
 
 const ApplySchema = z
   .object({
-    config: z.record(z.unknown()),
-    base_version: z.string(),
+    config: z.record(z.unknown()).optional(),
+    base_version: z.string().optional(),
     author: z.string().optional(),
-    reason: z.string().optional(),
+    reason: z.string().min(2).optional(),
+    confirm: z.boolean().optional(),
   })
   .strict();
 
-async function emitAudit(request: Request, payload: Record<string, unknown>) {
-  const auditUrl = new URL("/api/audit/log", request.url);
-  await fetch(auditUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-}
-
 export async function POST(req: Request) {
-  const startedAt = Date.now();
   const parsed = await parseJsonBody(req, ApplySchema);
   if (!parsed.ok) return parsed.response;
 
@@ -50,52 +37,35 @@ export async function POST(req: Request) {
   });
   if (!safe.ok) return safe.response;
 
-  const { config: nextConfig, base_version, author, reason } = parsed.data;
-
-  const manifest = await loadManifest();
-  if (manifest.currentVersion !== base_version) {
-    await emitAudit(req, {
-      action: "config.apply",
-      resource_type: "config",
-      reason: reason ?? null,
-      status: "rejected",
-      duration_ms: Date.now() - startedAt,
-      request_id: parsed.requestId,
-      error_code: "CONFLICT",
-    });
-
-    return jsonError(
-      "CONFLICT",
-      "base_version mismatch",
-      parsed.requestId,
-      409,
+  // M1 contract: in safe mode, even unconfirmed should be rejected.
+  const confirm = parsed.data.confirm ?? false;
+  if (!confirm) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "CONFIRM_REQUIRED",
+          message: "Config apply requires confirm=true",
+          requestId: parsed.requestId,
+        },
+      },
+      { status: 409 },
     );
   }
 
-  const currentLoaded = await loadConfigByVersion(manifest.currentVersion);
-  const currentConfig = currentLoaded?.config ?? {};
-
-  // Auto snapshot before apply
-  const snap1 = await snapshotConfig(currentConfig, manifest, {
-    author: "system",
-    reason: "auto-snapshot before apply",
-  });
-
-  const snap2 = await snapshotConfig(nextConfig, snap1.manifest, {
-    author,
-    reason,
-  });
-
-  await emitAudit(req, {
-    action: "config.apply",
-    resource_type: "config",
-    reason: reason ?? null,
-    status: "applied",
-    duration_ms: Date.now() - startedAt,
-    request_id: parsed.requestId,
+  const run = await createAndScheduleRun({
+    type: "config.apply",
+    session: auth.session,
+    reason: parsed.data.reason ?? "(no reason provided)",
+    input: {
+      config: parsed.data.config ?? {},
+      base_version: parsed.data.base_version ?? null,
+      author: parsed.data.author ?? null,
+    },
   });
 
   return NextResponse.json({
-    current_version: snap2.entry.version,
+    status: "queued",
+    mode: "mock",
+    run_id: run.id,
   });
 }
