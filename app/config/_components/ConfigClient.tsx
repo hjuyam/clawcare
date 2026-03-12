@@ -111,6 +111,54 @@ export function ConfigClient() {
     }
   }
 
+  async function doRollback() {
+    setBusy("rollback");
+    setMsg(null);
+    try {
+      if (!current?.current_version) {
+        setMsg({ ok: false, text: "Current version missing." });
+        return;
+      }
+      // Minimal UX: roll back to previous manifest version.
+      const versionsRes = await fetch("/api/config/versions", {
+        cache: "no-store",
+      });
+      const versionsJson = (await versionsRes.json().catch(() => null)) as any;
+      if (!versionsRes.ok) {
+        setMsg({
+          ok: false,
+          text: versionsJson?.error?.message || `HTTP ${versionsRes.status}`,
+        });
+        return;
+      }
+      const entries = (versionsJson?.entries ?? []) as Array<{ version: string }>;
+      const idx = entries.findIndex((e) => e.version === current.current_version);
+      const target = idx > 0 ? entries[idx - 1]?.version : null;
+      if (!target) {
+        setMsg({ ok: false, text: "No previous version to roll back to." });
+        return;
+      }
+
+      const res = await fetch("/api/config/rollback", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          target_version: target,
+          reason: reason.trim() || "(no reason)",
+          confirm: true,
+        }),
+      });
+      const json = (await res.json().catch(() => null)) as any;
+      if (!res.ok) {
+        setMsg({ ok: false, text: json?.error?.message || `HTTP ${res.status}` });
+        return;
+      }
+      setMsg({ ok: true, text: `Rollback queued (run_id=${json?.run_id ?? ""})` });
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const disabled = loading || !current;
 
   return (
@@ -170,6 +218,13 @@ export function ConfigClient() {
             onClick={() => void doApply()}
           >
             {busy === "apply" ? "Applying…" : "Apply (confirm=true)"}
+          </button>
+          <button
+            className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-900 disabled:opacity-50"
+            disabled={disabled || busy !== null}
+            onClick={() => void doRollback()}
+          >
+            {busy === "rollback" ? "Rolling back…" : "Rollback to previous"}
           </button>
 
           {msg ? (
