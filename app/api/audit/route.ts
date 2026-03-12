@@ -7,5 +7,9 @@ export async function GET(request: NextRequest) {
   const resource_type = searchParams.get("resource_type");
 
   const events = await readAuditEvents({ action, resource_type });
-  return NextResponse.json({ count: events.length, events });
+  return NextResponse.json({
+    items: events,
+    nextCursor: null,
+    hasMore: false,
+  });
 }

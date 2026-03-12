@@ -8,7 +8,7 @@ export async function GET() {
   const config = loaded?.config ?? {};
   const etag = hashConfig(config);
   return NextResponse.json({
-    version: currentVersion,
+    current_version: currentVersion,
     etag,
     config,
   });
