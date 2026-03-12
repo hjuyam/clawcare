@@ -72,9 +72,16 @@ function serializeCookie(name: string, value: string, options: {
 async function readSessionStore(): Promise<{ sessions: Session[] }> {
   try {
     const raw = await fs.readFile(SESSION_STORE_PATH, "utf8");
-    const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.sessions)) {
-      return { sessions: parsed.sessions };
+    if (!raw.trim()) return { sessions: [] };
+
+    // Best-effort: avoid crashing if the file is partially written.
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.sessions)) {
+        return { sessions: parsed.sessions };
+      }
+    } catch {
+      return { sessions: [] };
     }
   } catch (err: any) {
     if (err?.code !== "ENOENT") throw err;
@@ -84,7 +91,12 @@ async function readSessionStore(): Promise<{ sessions: Session[] }> {
 
 async function writeSessionStore(data: { sessions: Session[] }) {
   await fs.mkdir(path.dirname(SESSION_STORE_PATH), { recursive: true });
-  await fs.writeFile(SESSION_STORE_PATH, JSON.stringify(data, null, 2), "utf8");
+  const json = JSON.stringify(data, null, 2);
+
+  // Atomic-ish write to prevent corruption when multiple tests write concurrently.
+  const tmpPath = `${SESSION_STORE_PATH}.tmp.${process.pid}`;
+  await fs.writeFile(tmpPath, json, "utf8");
+  await fs.rename(tmpPath, SESSION_STORE_PATH);
 }
 
 export async function loadUsers(): Promise<UserRecord[]> {

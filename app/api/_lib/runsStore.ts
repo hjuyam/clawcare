@@ -23,14 +23,24 @@ export type RunRecord = {
 
 type StoreShape = { runs: RunRecord[] };
 
-const RUNS_PATH = path.join(process.cwd(), "data", "runs.json");
+const RUNS_PATH =
+  process.env.CLAWCARE_RUNS_PATH ??
+  path.join(process.cwd(), "data", "runs.json");
 
 async function readStore(): Promise<StoreShape> {
   try {
     const raw = await fs.readFile(RUNS_PATH, "utf8");
     if (!raw.trim()) return { runs: [] };
-    const parsed = JSON.parse(raw) as StoreShape;
-    if (parsed && Array.isArray(parsed.runs)) return { runs: parsed.runs };
+
+    // NOTE: local dev can end up with a partially-written file if the process
+    // is killed mid-write or if multiple workers write concurrently.
+    // We treat parse errors as "empty store" (best-effort) instead of crashing.
+    try {
+      const parsed = JSON.parse(raw) as StoreShape;
+      if (parsed && Array.isArray(parsed.runs)) return { runs: parsed.runs };
+    } catch {
+      return { runs: [] };
+    }
   } catch (err: any) {
     if (err?.code !== "ENOENT") throw err;
   }
@@ -40,7 +50,12 @@ async function readStore(): Promise<StoreShape> {
 async function writeStore(data: StoreShape) {
   await fs.mkdir(path.dirname(RUNS_PATH), { recursive: true });
   const json = JSON.stringify(data, null, 2);
-  await fs.writeFile(RUNS_PATH, json, "utf8");
+
+  // Atomic-ish write: write to a temp file then rename.
+  // Prevents file corruption from partial writes.
+  const tmpPath = `${RUNS_PATH}.tmp.${process.pid}`;
+  await fs.writeFile(tmpPath, json, "utf8");
+  await fs.rename(tmpPath, RUNS_PATH);
 }
 
 export async function listRuns(params?: { limit?: number }) {
