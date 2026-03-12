@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const maskedCurrent = maskSensitive(currentConfig);
   const maskedNext = maskSensitive(nextConfig);
 
-  const diff = diffJson(maskedCurrent, maskedNext);
+  const diff = diffJson(maskedCurrent as object, maskedNext as object);
 
   return NextResponse.json({
     current_version: currentVersion,
