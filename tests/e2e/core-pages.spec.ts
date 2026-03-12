@@ -13,7 +13,7 @@ test.describe("core pages (mock gateway)", () => {
 
   test("ops self_check (mock)", async ({ page }) => {
     await page.goto("/ops");
-    await expect(page.getByText("self_check")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ops" })).toBeVisible();
 
     // ops/self_check requires viewer+; use a real session cookie.
     const { loginAsRole } = await import("../_helpers/auth");
