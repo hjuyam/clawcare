@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { parseJsonBody } from "../_utils";
+import { requireRole } from "@/app/api/_lib/auth";
 
 const SelfCheckSchema = z.object({}).strict();
 
 export async function POST(req: Request) {
   const parsed = await parseJsonBody(req, SelfCheckSchema);
   if (!parsed.ok) return parsed.response;
+
+  const auth = await requireRole(req, "viewer", {
+    action: "ops.self_check",
+    resource_type: "ops",
+    requestId: parsed.requestId,
+  });
+  if (!auth.ok) return auth.response;
 
   const checks = [
     { id: "gateway.connectivity", status: "ok", message: "Gateway reachable" },

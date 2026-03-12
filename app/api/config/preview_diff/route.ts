@@ -7,6 +7,7 @@ import {
   maskSensitive,
 } from "../_utils";
 import { parseJsonBody } from "@/app/api/_lib/http";
+import { requireRole } from "@/app/api/_lib/auth";
 
 const PreviewSchema = z
   .object({
@@ -18,6 +19,13 @@ const PreviewSchema = z
 export async function POST(req: Request) {
   const parsed = await parseJsonBody(req, PreviewSchema);
   if (!parsed.ok) return parsed.response;
+
+  const auth = await requireRole(req, "viewer", {
+    action: "config.preview_diff",
+    resource_type: "config",
+    requestId: parsed.requestId,
+  });
+  if (!auth.ok) return auth.response;
 
   const nextConfig = parsed.data.config ?? {};
   const manifest = await loadManifest();

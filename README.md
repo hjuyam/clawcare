@@ -36,6 +36,15 @@ npm run start
 
 ---
 
+## 安全（M1 验收）
+
+- 安全基线与威胁模型：[`SECURITY.md`](./SECURITY.md)
+- 面向非开发验收的说明（登录/DEV_BYPASS、RBAC、Safe Mode、审计查询）：[`docs/acceptance-m1-security.md`](./docs/acceptance-m1-security.md)
+
+关键原则：**UI 不直连 Gateway**；所有鉴权、脱敏、审计与策略护栏都应在 BFF 层完成。
+
+---
+
 ## 架构概览
 
 ### 核心原则：UI 不直连 Gateway

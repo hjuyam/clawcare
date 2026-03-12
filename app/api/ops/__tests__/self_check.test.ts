@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { POST } from "../self_check/route";
+import { authCookieHeader } from "@/tests/_helpers/auth";
 
 describe("POST /api/ops/self_check", () => {
   it("returns mock self check summary", async () => {
+    const headers = {
+      "content-type": "application/json",
+      ...(await authCookieHeader("viewer")),
+    };
+
     const req = new Request("http://localhost/api/ops/self_check", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers,
       body: JSON.stringify({}),
     });
 

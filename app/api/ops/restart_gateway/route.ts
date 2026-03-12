@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, parseJsonBody } from "../_utils";
+import { requireRole } from "@/app/api/_lib/auth";
+import { enforceSafeMode } from "@/app/api/_lib/safeMode";
 
 const RestartSchema = z
   .object({
@@ -27,6 +29,24 @@ export async function POST(req: Request) {
   const startedAt = Date.now();
   const parsed = await parseJsonBody(req, RestartSchema);
   if (!parsed.ok) return parsed.response;
+
+  const auth = await requireRole(req, "admin", {
+    action: "ops.restart_gateway",
+    resource_type: "ops",
+    requestId: parsed.requestId,
+    reason: parsed.data.reason ?? null,
+  });
+  if (!auth.ok) return auth.response;
+
+  const safe = await enforceSafeMode({
+    request: req,
+    requestId: parsed.requestId,
+    action: "ops.restart_gateway",
+    resource_type: "ops",
+    reason: parsed.data.reason ?? null,
+    session: auth.session,
+  });
+  if (!safe.ok) return safe.response;
 
   const { reason, confirm } = parsed.data;
   if (!confirm) {

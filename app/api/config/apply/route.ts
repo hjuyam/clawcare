@@ -6,6 +6,8 @@ import {
   snapshotConfig,
 } from "../_utils";
 import { jsonError, parseJsonBody } from "@/app/api/_lib/http";
+import { requireRole } from "@/app/api/_lib/auth";
+import { enforceSafeMode } from "@/app/api/_lib/safeMode";
 
 const ApplySchema = z
   .object({
@@ -29,6 +31,24 @@ export async function POST(req: Request) {
   const startedAt = Date.now();
   const parsed = await parseJsonBody(req, ApplySchema);
   if (!parsed.ok) return parsed.response;
+
+  const auth = await requireRole(req, "admin", {
+    action: "config.apply",
+    resource_type: "config",
+    requestId: parsed.requestId,
+    reason: parsed.data.reason ?? null,
+  });
+  if (!auth.ok) return auth.response;
+
+  const safe = await enforceSafeMode({
+    request: req,
+    requestId: parsed.requestId,
+    action: "config.apply",
+    resource_type: "config",
+    reason: parsed.data.reason ?? null,
+    session: auth.session,
+  });
+  if (!safe.ok) return safe.response;
 
   const { config: nextConfig, base_version, author, reason } = parsed.data;
 

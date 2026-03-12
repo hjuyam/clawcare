@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { parseJsonBody } from "../_utils";
+import { requireRole } from "@/app/api/_lib/auth";
+import { enforceSafeMode } from "@/app/api/_lib/safeMode";
 
 const CleanupSchema = z
   .object({
@@ -30,9 +32,28 @@ export async function POST(req: Request) {
   const parsed = await parseJsonBody(req, CleanupSchema);
   if (!parsed.ok) return parsed.response;
 
+  const auth = await requireRole(req, "operator", {
+    action: "ops.cleanup",
+    resource_type: "ops",
+    requestId: parsed.requestId,
+    reason: parsed.data.reason ?? null,
+  });
+  if (!auth.ok) return auth.response;
+
   const dryRun = parsed.data.confirm
     ? false
     : parsed.data.dry_run ?? parsed.data.dryRun ?? true;
+
+  const safe = await enforceSafeMode({
+    request: req,
+    requestId: parsed.requestId,
+    action: "ops.cleanup",
+    resource_type: "ops",
+    reason: parsed.data.reason ?? null,
+    confirm: parsed.data.confirm,
+    session: auth.session,
+  });
+  if (!safe.ok) return safe.response;
 
   const preview = {
     caches: ["gateway-temp", "ops-snapshots"],

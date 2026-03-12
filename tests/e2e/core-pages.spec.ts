@@ -11,11 +11,15 @@ test.describe("core pages (mock gateway)", () => {
     await expect(page.getByText("Placeholder capabilities")).toBeVisible();
   });
 
-  test("ops self_check (mock)", async ({ page, request }) => {
+  test("ops self_check (mock)", async ({ page }) => {
     await page.goto("/ops");
     await expect(page.getByText("self_check")).toBeVisible();
 
-    const res = await request.post("/api/ops/self_check", { data: {} });
+    // ops/self_check requires viewer+; use a real session cookie.
+    const { loginAsRole } = await import("../_helpers/auth");
+    await loginAsRole(page, "viewer");
+
+    const res = await page.request.post("/api/ops/self_check", { data: {} });
     expect(res.ok()).toBeTruthy();
 
     const json = await res.json();

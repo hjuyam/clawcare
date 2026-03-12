@@ -6,6 +6,8 @@ import {
   snapshotConfig,
 } from "../_utils";
 import { jsonError, parseJsonBody } from "@/app/api/_lib/http";
+import { requireRole } from "@/app/api/_lib/auth";
+import { enforceSafeMode } from "@/app/api/_lib/safeMode";
 
 const RollbackSchema = z
   .object({
@@ -33,6 +35,24 @@ export async function POST(req: Request) {
   const targetVersion = parsed.data.target_version ?? parsed.data.version;
   const author = parsed.data.author;
   const reason = parsed.data.reason ?? `rollback to ${targetVersion}`;
+
+  const auth = await requireRole(req, "admin", {
+    action: "config.rollback",
+    resource_type: "config",
+    requestId: parsed.requestId,
+    reason,
+  });
+  if (!auth.ok) return auth.response;
+
+  const safe = await enforceSafeMode({
+    request: req,
+    requestId: parsed.requestId,
+    action: "config.rollback",
+    resource_type: "config",
+    reason,
+    session: auth.session,
+  });
+  if (!safe.ok) return safe.response;
 
   if (!targetVersion) {
     return jsonError(

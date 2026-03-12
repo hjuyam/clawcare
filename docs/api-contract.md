@@ -8,14 +8,29 @@
 
 ## 鉴权（Authentication）
 
-推荐：
-- 浏览器侧使用 **HttpOnly + Secure** session cookie
-- 不在前端保存 gateway token/长期凭据
-- 对外发/写入/删除等动作：二次确认 + reason（入审计）
+当前实现：
+- 登录接口：`POST /api/auth/login`
+  - Body: `{ "otp": "123456", "user_id": "optional" }`
+  - 成功后写入 **HttpOnly + SameSite=Lax** session cookie：`clawcare_session`
+- 登出接口：`POST /api/auth/logout`
+  - 清理 session cookie
+- 登录方式：TOTP（`otplib`）
+  - 默认读取 `data/users.json`（示例结构见下）
+  - 若文件不存在，使用环境变量：`TOTP_SECRET` + `AUTH_ROLE` + `AUTH_USER_ID`
+- 本地开发旁路：`DEV_BYPASS=1` 时允许 `otp=DEV-BYPASS`
 
-（来自 clawcare.md 的 P0 要求）
-- 支持强登录（如 TOTP）
-- RBAC：Admin / Operator / Viewer（Viewer 禁写）
+RBAC：`admin / operator / viewer`
+- `requireRole(minRole)` 中按角色等级拦截
+- 低权限访问高权限接口会返回 `FORBIDDEN`
+
+`data/users.json` 结构示例：
+```json
+{
+  "users": [
+    { "id": "local-admin", "role": "admin", "totp_secret": "BASE32SECRET" }
+  ]
+}
+```
 
 ---
 
