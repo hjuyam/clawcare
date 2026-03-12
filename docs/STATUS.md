@@ -14,23 +14,23 @@
 - `docs/FEATURES_M1.md`
 - `docs/TEST_REPORT_M1.md`
 
-## 进行中（M2：Runs/Tasks 最小闭环）
-目标：把“运维动作”从一次性 API 调用升级为可追踪的 Run/Task：
-- 能创建一次 run（任务执行记录）
-- 能查看 run 状态（pending/running/succeeded/failed）
-- 能产出 artifacts（日志、诊断包路径/下载信息）
-- RBAC + Safe Mode 继续覆盖 runs/tasks 的创建/执行
+## 已完成（M2：Runs/Tasks 最小闭环）
+结论：已具备“可创建 run + 可查看列表/详情 + 文件持久化 + RBAC/Safe Mode 覆盖”的可验收能力。
+- Runs API：创建 / 列表 / 详情
+- Runs 存储：`data/runs.json`（文件持久化，best-effort）
+- Runs UI：`/tasks` 列表页 + `/tasks/[id]` 详情页
+- 执行器：内置 mock executor（best-effort timer）
 
-初步范围（中庸拍板，最小可上线闭环）：
-- 数据模型：Run（id、type、status、requestedBy、createdAt、startedAt、endedAt、result、auditRef）
-- API：
-  - `POST /api/runs` 创建 run
-  - `GET /api/runs` 列表
-  - `GET /api/runs/:id` 详情
-- UI：
-  - Runs 列表页 + 详情页
-- 执行器：先使用“内置 mock 执行器”（setTimeout 模拟），后续再接真实 OpenClaw Gateway/Host Ops。
+待补齐（不影响 v0 最小闭环，但建议作为 M2.1）：
+- Runs UI 的 E2E 合约（目前 E2E 仍以 M1 安全合约为主）
+
+## 规划（M3）
+- Config Center：配置编辑（备份→diff→应用→可回滚）+ 审计面板
+
+## 规划（M4）
+- Memory Center：记忆浏览/搜索/清理 + 安全护栏（Safe Mode 一致）
 
 ## 上线定义（阶段性）
-M1 阶段：属于“安全基线完成”，尚未达到“完整可用的任务闭环”。
-M2 达成后：具备最小闭环 + 可审计 + 可验收，即可作为 v0 上线。
+- M1：安全基线完成，但尚未达到完整可用闭环
+- M2：最小闭环可验收，可作为 v0 上线
+- M3/M4：增强阶段（配置/记忆中心），以“可回滚+可审计”为主轴
