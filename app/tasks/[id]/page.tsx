@@ -1,7 +1,8 @@
 import { PageShell } from "@/app/_components/PageShell";
+import { getBaseUrl } from "@/app/_lib/baseUrl";
 
 async function fetchRun(id: string) {
-  const res = await fetch(`http://localhost:3000/api/runs/${id}`, {
+  const res = await fetch(`${getBaseUrl()}/api/runs/${id}`, {
     cache: "no-store",
   });
   if (!res.ok) return null;

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { PageShell } from "@/app/_components/PageShell";
+import { getBaseUrl } from "@/app/_lib/baseUrl";
 
 async function fetchRuns() {
-  const res = await fetch("http://localhost:3000/api/runs?limit=50", {
+  const res = await fetch(`${getBaseUrl()}/api/runs?limit=50`, {
     cache: "no-store",
   });
   if (!res.ok) return { runs: [] as any[] };
