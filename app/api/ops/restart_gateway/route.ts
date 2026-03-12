@@ -3,6 +3,7 @@ import { z } from "zod";
 import { errorResponse, parseJsonBody } from "../_utils";
 import { requireRole } from "@/app/api/_lib/auth";
 import { enforceSafeMode } from "@/app/api/_lib/safeMode";
+import { createAndScheduleRun } from "@/app/api/_lib/runFromRequest";
 
 const RestartSchema = z
   .object({
@@ -68,6 +69,13 @@ export async function POST(req: Request) {
     );
   }
 
+  const run = await createAndScheduleRun({
+    type: "ops.restart_gateway",
+    session: auth.session,
+    reason,
+    input: { reason },
+  });
+
   await emitAudit(req, {
     action: "ops.restart_gateway",
     resource_type: "ops",
@@ -75,11 +83,13 @@ export async function POST(req: Request) {
     status: "queued",
     duration_ms: Date.now() - startedAt,
     request_id: parsed.requestId,
+    run_id: run.id,
   });
 
   return NextResponse.json({
     status: "queued",
     mode: "mock",
+    run_id: run.id,
     reason,
     requested_at: new Date().toISOString(),
   });

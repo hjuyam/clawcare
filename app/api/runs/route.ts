@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { z } from "zod";
-import { jsonError, parseJsonBody } from "@/app/api/_lib/http";
+import { parseJsonBody } from "@/app/api/_lib/http";
 import { requireRole } from "@/app/api/_lib/auth";
 import { enforceSafeMode } from "@/app/api/_lib/safeMode";
-import { createRun, listRuns, updateRun, type RunRecord } from "@/app/api/_lib/runsStore";
+import {
+  createRun,
+  listRuns,
+  type RunRecord,
+} from "@/app/api/_lib/runsStore";
+import { scheduleMockExecution } from "@/app/api/_lib/runExecutor";
 
 const CreateRunSchema = z
   .object({
@@ -14,8 +19,8 @@ const CreateRunSchema = z
   })
   .strict();
 
-function isHighRiskRun(type: string) {
-  // 中庸拍板：凡是会改变系统状态的 ops 视为高危
+export function isHighRiskRun(type: string) {
+  // 中庸拍板：凡是会改变系统状态的 ops/config 视为高危
   return [
     "ops.restart_gateway",
     "ops.cleanup",
@@ -23,29 +28,6 @@ function isHighRiskRun(type: string) {
     "config.apply",
     "config.rollback",
   ].includes(type);
-}
-
-async function scheduleMockExecution(run: RunRecord) {
-  // 注意：Next 在某些部署模式下不保证长生命周期。
-  // M2 最小闭环阶段先用 best-effort 模拟；上线版再接真实执行器/队列。
-  const delayMs = 400;
-  setTimeout(async () => {
-    await updateRun(run.id, {
-      status: "running",
-      started_at: new Date().toISOString(),
-    });
-  }, 10);
-
-  setTimeout(async () => {
-    await updateRun(run.id, {
-      status: "succeeded",
-      ended_at: new Date().toISOString(),
-      result: {
-        mode: "mock",
-        message: "Run finished (mock executor)",
-      },
-    });
-  }, delayMs);
 }
 
 export async function GET(req: Request) {
