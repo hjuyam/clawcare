@@ -1,7 +1,27 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import { updateRun, type RunRecord } from "./runsStore";
 
 function isTestEnv() {
   return process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
+}
+
+async function maybeWriteDiagnosticsArtifact(run: RunRecord) {
+  if (run.type !== "ops.diagnostics_bundle") return null;
+
+  const dir = path.join(process.cwd(), "data", "artifacts");
+  const filename = `diagnostics_bundle_${run.id}.json`;
+  const filePath = path.join(dir, filename);
+  const payload = {
+    run_id: run.id,
+    generated_at: new Date().toISOString(),
+    summary: "Mock diagnostics bundle",
+    checks: ["gateway.connectivity", "disk.usage", "memory.stats"],
+  };
+
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(payload, null, 2), "utf8");
+  return filePath;
 }
 
 export async function scheduleMockExecution(run: RunRecord) {
@@ -25,12 +45,14 @@ export async function scheduleMockExecution(run: RunRecord) {
 
   setTimeout(async () => {
     try {
+      const artifactPath = await maybeWriteDiagnosticsArtifact(run).catch(() => null);
       await updateRun(run.id, {
         status: "succeeded",
         ended_at: new Date().toISOString(),
         result: {
           mode: "mock",
           message: "Run finished (mock executor)",
+          ...(artifactPath ? { artifact_path: artifactPath } : null),
         },
       });
     } catch {

@@ -18,8 +18,10 @@
 结论：已具备“可创建 run + 可查看列表/详情 + 文件持久化 + RBAC/Safe Mode 覆盖”的可验收能力。
 - Runs API：创建 / 列表 / 详情
 - Runs 存储：`data/runs.json`（文件持久化，best-effort）
-- Runs UI：`/tasks` 列表页 + `/tasks/[id]` 详情页
+- Runs UI：`/tasks` 列表页 + `/tasks/[id]` 详情页（轮询刷新状态）
 - 执行器：内置 mock executor（best-effort timer）
+- 审计：runs.create / runs.update best-effort 写入 audit log
+- Diagnostics bundle：mock artifact 写入 `data/artifacts/` 并回传路径
 
 待补齐（不影响 v0 最小闭环，但建议作为 M2.1）：
 - Runs UI 的 E2E 合约（目前 E2E 仍以 M1 安全合约为主）

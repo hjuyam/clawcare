@@ -1,5 +1,6 @@
 import { PageShell } from "@/app/_components/PageShell";
 import { getBaseUrl } from "@/app/_lib/baseUrl";
+import { RunDetailClient } from "@/app/tasks/_components/RunDetailClient";
 
 async function fetchRun(id: string) {
   const res = await fetch(`${getBaseUrl()}/api/runs/${id}`, {
@@ -14,15 +15,7 @@ export default async function RunDetailPage({ params }: { params: { id: string }
 
   return (
     <PageShell title="Run Detail" subtitle={params.id}>
-      <div className="rounded-xl border border-neutral-200 bg-white p-5 text-sm">
-        {!data ? (
-          <div className="text-neutral-700">Run not found.</div>
-        ) : (
-          <pre className="overflow-auto rounded-lg bg-neutral-50 p-4">
-            {JSON.stringify(data.run, null, 2)}
-          </pre>
-        )}
-      </div>
+      <RunDetailClient initialRunId={params.id} initialRun={data?.run ?? null} />
     </PageShell>
   );
 }

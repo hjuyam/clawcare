@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import { appendAuditEvent, buildAuditEvent } from "./audit";
 
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "denied";
 
@@ -59,6 +60,15 @@ async function writeStore(data: StoreShape) {
   await fs.rename(tmpPath, RUNS_PATH);
 }
 
+async function appendRunAuditEvent(payload: Record<string, unknown>) {
+  try {
+    const event = buildAuditEvent(payload);
+    await appendAuditEvent(event);
+  } catch {
+    // best-effort audit logging
+  }
+}
+
 export async function listRuns(params?: { limit?: number }) {
   const store = await readStore();
   const runs = [...store.runs].sort(
@@ -77,6 +87,19 @@ export async function createRun(run: RunRecord) {
   const store = await readStore();
   store.runs.push(run);
   await writeStore(store);
+
+  await appendRunAuditEvent({
+    action: "runs.create",
+    resource_type: "runs",
+    resource_id: run.id,
+    actor_type: "user",
+    actor_id: run.requested_by?.user_id ?? null,
+    session_id: run.requested_by?.session_id ?? null,
+    status: "ok",
+    reason: run.reason ?? null,
+    diff_summary: `type=${run.type}`,
+  });
+
   return run;
 }
 
@@ -84,7 +107,30 @@ export async function updateRun(id: string, patch: Partial<RunRecord>) {
   const store = await readStore();
   const idx = store.runs.findIndex((r) => r.id === id);
   if (idx === -1) return null;
+  const before = store.runs[idx];
   store.runs[idx] = { ...store.runs[idx], ...patch };
+  const updated = store.runs[idx];
   await writeStore(store);
-  return store.runs[idx];
+
+  const changedKeys = Object.keys(patch).join(", ") || "unknown";
+  const statusSummary =
+    patch.status && before.status !== patch.status
+      ? `status ${before.status} → ${patch.status}`
+      : null;
+
+  await appendRunAuditEvent({
+    action: "runs.update",
+    resource_type: "runs",
+    resource_id: id,
+    actor_type: "system",
+    actor_id: "run-executor",
+    status: "ok",
+    before_ref: before.status,
+    after_ref: updated.status,
+    diff_summary: [statusSummary, `fields: ${changedKeys}`]
+      .filter(Boolean)
+      .join("; "),
+  });
+
+  return updated;
 }

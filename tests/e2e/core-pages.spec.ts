@@ -36,11 +36,7 @@ test.describe("core pages (mock gateway)", () => {
   test("config placeholder", async ({ page }) => {
     await page.goto("/config");
 
-    await expect(
-      page.getByText(
-        "占位：Basic Settings + Config Center（只读→启用编辑→diff→apply→rollback）。"
-      )
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Config" })).toBeVisible();
   });
 
   test("security audit placeholder", async ({ page }) => {

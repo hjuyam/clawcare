@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageShell } from "@/app/_components/PageShell";
 import { getBaseUrl } from "@/app/_lib/baseUrl";
+import { RunListClient } from "@/app/tasks/_components/RunListClient";
 
 async function fetchRuns() {
   const res = await fetch(`${getBaseUrl()}/api/runs?limit=50`, {
@@ -26,40 +27,7 @@ export default async function TasksPage() {
           </Link>
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-neutral-200">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-neutral-50 text-neutral-700">
-              <tr>
-                <th className="px-3 py-2">ID</th>
-                <th className="px-3 py-2">Type</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.runs.length === 0 ? (
-                <tr>
-                  <td className="px-3 py-3 text-neutral-600" colSpan={4}>
-                    暂无运行记录。你可以先调用 `POST /api/runs` 创建一个 mock run。
-                  </td>
-                </tr>
-              ) : (
-                data.runs.map((r) => (
-                  <tr key={r.id} className="border-t border-neutral-200">
-                    <td className="px-3 py-2 font-mono">
-                      <Link className="underline" href={`/tasks/${r.id}`}>
-                        {String(r.id).slice(0, 8)}…
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2 font-mono">{r.type}</td>
-                    <td className="px-3 py-2">{r.status}</td>
-                    <td className="px-3 py-2">{r.created_at}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <RunListClient initialRuns={data.runs ?? []} />
       </div>
     </PageShell>
   );
