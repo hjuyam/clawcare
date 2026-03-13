@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("core pages (mock gateway)", () => {
+  // Next.js webServer + first request can be slow on some hosts.
+  test.setTimeout(60_000);
+
   test("home shows capabilities", async ({ page }) => {
     await page.goto("/");
 

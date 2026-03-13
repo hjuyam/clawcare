@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("M3 config center (contract-lite)", () => {
+  // These flows involve file IO + mock-run execution; allow slower CI hosts.
+  test.setTimeout(60_000);
+
   test("viewer can preview diff", async ({ page }) => {
     const { loginAsRole } = await import("../_helpers/auth");
     await loginAsRole(page, "viewer");
@@ -28,10 +31,13 @@ test.describe("M3 config center (contract-lite)", () => {
     await page.getByRole("button", { name: "Apply (confirm=true)" }).click();
 
     await expect
-      .poll(async () => {
-        const now = await page.getByText(/version: v\d+/).textContent();
-        return { before: before?.trim() ?? "", now: now?.trim() ?? "" };
-      })
+      .poll(
+        async () => {
+          const now = await page.getByText(/version: v\d+/).textContent();
+          return { before: before?.trim() ?? "", now: now?.trim() ?? "" };
+        },
+        { timeout: 30_000 }
+      )
       .not.toEqual({ before: before?.trim() ?? "", now: before?.trim() ?? "" });
 
     // And the latest entry should show our reason (best-effort contract).
