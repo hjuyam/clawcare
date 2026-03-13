@@ -8,6 +8,9 @@ test.describe("M1 auth/RBAC/safe mode (contract)", () => {
   });
 
   test("unauthenticated access is denied", async ({ page }) => {
+    // Warm-up: Next dev server can still be finalizing startup/reload when the full suite runs.
+    await page.request.get("/api/health");
+
     const res = await page.request.post("/api/ops/restart_gateway", {
       data: { reason: "e2e", confirm: true },
     });
