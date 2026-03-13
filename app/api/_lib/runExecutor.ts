@@ -1,20 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { updateRun, type RunRecord } from "./runsStore";
-import {
-  loadManifest,
-  saveManifest,
-  snapshotConfig,
-  type Manifest,
-} from "@/app/api/config/_utils";
 import { appendAuditEvent, buildAuditEvent } from "./audit";
+import { executeConfigApply, executeConfigRollback } from "./configHandlers";
 
 function isTestEnv() {
   return process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
-}
-
-function toStringOrNull(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value : null;
 }
 
 async function maybeWriteDiagnosticsArtifact(run: RunRecord) {
@@ -35,192 +26,186 @@ async function maybeWriteDiagnosticsArtifact(run: RunRecord) {
   return filePath;
 }
 
-async function writeAuditEvent(payload: Record<string, unknown>) {
-  try {
-    const event = buildAuditEvent(payload);
-    await appendAuditEvent(event);
-  } catch {
-    // best-effort
-  }
-}
-
-async function executeConfigApply(run: RunRecord) {
-  const input = run.input ?? {};
-  const config =
-    typeof input.config === "object" && input.config
-      ? (input.config as Record<string, unknown>)
-      : {};
-  const baseVersion = toStringOrNull(input.base_version);
-  const author = toStringOrNull(input.author) ?? undefined;
-  const reason = toStringOrNull(input.reason) ?? undefined;
-
-  const manifest = await loadManifest();
-  if (baseVersion && baseVersion !== manifest.currentVersion) {
-    return {
-      ok: false as const,
-      error: {
-        code: "BASE_VERSION_MISMATCH",
-        message: `Expected base_version ${manifest.currentVersion}, got ${baseVersion}`,
-      },
-      result: {
-        before: manifest.currentVersion,
-        after: manifest.currentVersion,
-        version: manifest.currentVersion,
-      },
-    };
-  }
-
-  const before = manifest.currentVersion;
-  const { manifest: updated, entry } = await snapshotConfig(config, manifest, {
-    author,
-    reason,
-  });
-
-  await writeAuditEvent({
-    action: "config.apply",
-    resource_type: "config",
-    resource_id: entry.version,
+async function writeRunAudit(params: {
+  run: RunRecord;
+  status: "succeeded" | "failed";
+  before_ref?: string | null;
+  after_ref?: string | null;
+  diff_summary?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+}) {
+  const evt = buildAuditEvent({
     actor_type: "user",
-    actor_id: run.requested_by?.user_id ?? null,
-    session_id: run.requested_by?.session_id ?? null,
-    status: "ok",
-    reason: reason ?? run.reason ?? null,
-    before_ref: before,
-    after_ref: updated.currentVersion,
-    diff_summary: `apply ${before} -> ${updated.currentVersion}`,
+    actor_id: params.run.requested_by.user_id,
+    session_id: params.run.requested_by.session_id,
+    action: params.run.type,
+    resource_type: params.run.type.startsWith("config.") ? "config" : "runs",
+    resource_id: params.run.id,
+    policy_decision: "allow",
+    status: params.status,
+    before_ref: params.before_ref ?? null,
+    after_ref: params.after_ref ?? null,
+    diff_summary: params.diff_summary ?? null,
+    error_code: params.error_code ?? null,
+    error_message: params.error_message ?? null,
+    reason: params.run.reason,
   });
-
-  return {
-    ok: true as const,
-    result: {
-      before,
-      after: updated.currentVersion,
-      version: entry.version,
-      entry,
-    },
-  };
-}
-
-async function executeConfigRollback(run: RunRecord) {
-  const input = run.input ?? {};
-  const target =
-    toStringOrNull(input.target_version) ?? toStringOrNull(input.snapshot_id);
-  const author = toStringOrNull(input.author) ?? undefined;
-  const reason = toStringOrNull(input.reason) ?? undefined;
-
-  if (!target) {
-    return {
-      ok: false as const,
-      error: {
-        code: "TARGET_VERSION_REQUIRED",
-        message: "target_version is required",
-      },
-    };
-  }
-
-  const manifest = await loadManifest();
-  const entry = manifest.entries.find((item) => item.version === target);
-  if (!entry) {
-    return {
-      ok: false as const,
-      error: {
-        code: "TARGET_VERSION_NOT_FOUND",
-        message: `Unknown target_version ${target}`,
-      },
-    };
-  }
-
-  const before = manifest.currentVersion;
-  const updated: Manifest = {
-    currentVersion: target,
-    entries: manifest.entries,
-  };
-  await saveManifest(updated);
-
-  await writeAuditEvent({
-    action: "config.rollback",
-    resource_type: "config",
-    resource_id: target,
-    actor_type: "user",
-    actor_id: run.requested_by?.user_id ?? null,
-    session_id: run.requested_by?.session_id ?? null,
-    status: "ok",
-    reason: reason ?? run.reason ?? null,
-    before_ref: before,
-    after_ref: target,
-    diff_summary: author
-      ? `rollback ${before} -> ${target} (author=${author})`
-      : `rollback ${before} -> ${target}`,
-  });
-
-  return {
-    ok: true as const,
-    result: {
-      before,
-      after: target,
-      version: target,
-      entry,
-    },
-  };
-}
-
-async function executeMockRun(run: RunRecord) {
-  if (!isTestEnv()) {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-  }
-  const artifactPath = await maybeWriteDiagnosticsArtifact(run).catch(() => null);
-  return {
-    ok: true as const,
-    result: {
-      mode: "mock",
-      message: "Run finished (mock executor)",
-      ...(artifactPath ? { artifact_path: artifactPath } : null),
-    },
-  };
-}
-
-async function executeRun(run: RunRecord) {
-  await updateRun(run.id, {
-    status: "running",
-    started_at: new Date().toISOString(),
-  });
-
-  const execution =
-    run.type === "config.apply"
-      ? await executeConfigApply(run)
-      : run.type === "config.rollback"
-        ? await executeConfigRollback(run)
-        : await executeMockRun(run);
-
-  if (!execution.ok) {
-    await updateRun(run.id, {
-      status: "failed",
-      ended_at: new Date().toISOString(),
-      result: execution.result ?? null,
-      error: execution.error,
-    });
-    return;
-  }
-
-  await updateRun(run.id, {
-    status: "succeeded",
-    ended_at: new Date().toISOString(),
-    result: execution.result,
-  });
+  await appendAuditEvent(evt);
 }
 
 export async function scheduleMockExecution(run: RunRecord) {
   // NOTE: In serverless/edge runtimes, timers aren't guaranteed.
   // For M2 minimal loop we use best-effort mock execution.
-  // In unit tests, avoid background timers that can outlive the test and cause unhandled rejections.
-  if (isTestEnv()) {
-    await executeRun(run);
-    return;
+
+  // M3: config.apply / config.rollback run inline (stable, no timers)
+  // IMPORTANT: this must also run in test env, otherwise config semantics are never exercised.
+  if (run.type === "config.apply" || run.type === "config.rollback") {
+    await updateRun(run.id, {
+      status: "running",
+      started_at: new Date().toISOString(),
+    });
+
+    try {
+      if (run.type === "config.apply") {
+        const r = await executeConfigApply(run.input);
+        if (!r.ok) {
+          await updateRun(run.id, {
+            status: "failed",
+            ended_at: new Date().toISOString(),
+            error: r.error,
+            result: {
+              mode: "inline",
+              kind: "config.apply",
+              before_version: (r as any).beforeVersion ?? null,
+            },
+          });
+          await writeRunAudit({
+            run,
+            status: "failed",
+            before_ref: (r as any).beforeVersion ?? null,
+            error_code: r.error.code,
+            error_message: r.error.message,
+          });
+          return;
+        }
+
+        await updateRun(run.id, {
+          status: "succeeded",
+          ended_at: new Date().toISOString(),
+          result: {
+            mode: "inline",
+            kind: "config.apply",
+            // legacy keys expected by tests/clients
+            before: r.beforeVersion,
+            after: r.afterVersion,
+            version: r.afterVersion,
+            // explicit keys
+            before_version: r.beforeVersion,
+            after_version: r.afterVersion,
+          },
+        });
+        await writeRunAudit({
+          run,
+          status: "succeeded",
+          before_ref: r.beforeVersion,
+          after_ref: r.afterVersion,
+        });
+        return;
+      }
+
+      const r = await executeConfigRollback(run.input);
+      if (!r.ok) {
+        await updateRun(run.id, {
+          status: "failed",
+          ended_at: new Date().toISOString(),
+          error: r.error,
+          result: {
+            mode: "inline",
+            kind: "config.rollback",
+            before_version: (r as any).beforeVersion ?? null,
+          },
+        });
+        await writeRunAudit({
+          run,
+          status: "failed",
+          before_ref: (r as any).beforeVersion ?? null,
+          error_code: r.error.code,
+          error_message: r.error.message,
+        });
+        return;
+      }
+
+      await updateRun(run.id, {
+        status: "succeeded",
+        ended_at: new Date().toISOString(),
+        result: {
+          mode: "inline",
+          kind: "config.rollback",
+          // legacy keys expected by tests/clients
+          before: r.beforeVersion,
+          after: r.afterVersion,
+          version: r.afterVersion,
+          // explicit keys
+          before_version: r.beforeVersion,
+          after_version: r.afterVersion,
+          rolled_back_to: r.rolledBackTo,
+        },
+      });
+      await writeRunAudit({
+        run,
+        status: "succeeded",
+        before_ref: r.beforeVersion,
+        after_ref: r.afterVersion,
+        diff_summary: r.rolledBackTo ? `rollback->${r.rolledBackTo}` : null,
+      });
+      return;
+    } catch (err: any) {
+      await updateRun(run.id, {
+        status: "failed",
+        ended_at: new Date().toISOString(),
+        error: { code: "EXEC_ERROR", message: String(err?.message ?? err) },
+      });
+      await writeRunAudit({
+        run,
+        status: "failed",
+        error_code: "EXEC_ERROR",
+        error_message: String(err?.message ?? err),
+      });
+      return;
+    }
   }
 
-  setTimeout(() => {
-    void executeRun(run).catch(() => {
+  // In unit tests, avoid background timers that can outlive the test and cause unhandled rejections.
+  if (isTestEnv()) return;
+
+  const delayMs = 400;
+
+  setTimeout(async () => {
+    try {
+      await updateRun(run.id, {
+        status: "running",
+        started_at: new Date().toISOString(),
+      });
+    } catch {
       // ignore
-    });
+    }
   }, 10);
+
+  setTimeout(async () => {
+    try {
+      const artifactPath = await maybeWriteDiagnosticsArtifact(run).catch(() => null);
+      await updateRun(run.id, {
+        status: "succeeded",
+        ended_at: new Date().toISOString(),
+        result: {
+          mode: "mock",
+          message: "Run finished (mock executor)",
+          ...(artifactPath ? { artifact_path: artifactPath } : null),
+        },
+      });
+    } catch {
+      // ignore
+    }
+  }, delayMs);
 }
