@@ -28,3 +28,6 @@ playwright/.cache/
 # Playwright artifacts
 /test-results/
 /playwright-report/
+
+# Daily briefs (local, not committed)
+docs/daily-brief/
