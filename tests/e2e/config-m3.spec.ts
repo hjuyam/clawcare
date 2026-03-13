@@ -25,6 +25,8 @@ test.describe("M3 config center (contract-lite)", () => {
     await page.goto("/config");
 
     await page.getByPlaceholder("Why are you changing config?").fill("e2e apply");
+    // Ensure we actually change config so apply should advance version.
+    await page.locator("textarea").fill(JSON.stringify({ featureFlag: true }, null, 2));
 
     // Capture current version, then apply and assert the manifest/version actually moved.
     const before = await page.getByText(/version: v\d+/).textContent();

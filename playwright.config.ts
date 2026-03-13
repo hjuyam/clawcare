@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
-const baseURL = process.env.BASE_URL || `http://localhost:${port}`;
+// Use 127.0.0.1 to avoid IPv6 ::1 resolution issues in some environments.
+const baseURL = process.env.BASE_URL || `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",

@@ -1,8 +1,10 @@
 import type { Page } from "@playwright/test";
 import { buildSessionCookie, createSession, type Role } from "@/app/api/_lib/auth";
 
+// Keep in sync with playwright.config.ts default baseURL.
+// Use 127.0.0.1 to avoid IPv6 (::1) resolution and cookie domain mismatches.
 export const BASE_URL =
-  process.env.BASE_URL || `http://localhost:${process.env.PORT ?? 3000}`;
+  process.env.BASE_URL || `http://127.0.0.1:${process.env.PORT ?? 3000}`;
 
 /**
  * E2E helper: create a real session in local session store, then attach cookie to the browser.
