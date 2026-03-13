@@ -29,6 +29,11 @@
 ## 规划（M3）
 - Config Center：配置编辑（备份→diff→应用→可回滚）+ 审计面板
 
+进展（M3）：
+- Runs executor 支持 config.apply/config.rollback 实际落盘与回滚
+- apply/rollback 输入落盘 schema 对齐（config/base_version/target_version/author/reason）
+- 单测覆盖 apply/rollback 版本变更与 base_version 校验
+
 ## 规划（M4）
 - Memory Center：记忆浏览/搜索/清理 + 安全护栏（Safe Mode 一致）
 

@@ -53,14 +53,17 @@ export async function POST(req: Request) {
     );
   }
 
+  const targetVersion = parsed.data.target_version ?? parsed.data.snapshot_id ?? null;
+
   const run = await createAndScheduleRun({
     type: "config.rollback",
     session: auth.session,
     reason: parsed.data.reason ?? "(no reason provided)",
     input: {
-      target_version: parsed.data.target_version ?? null,
+      target_version: targetVersion,
       snapshot_id: parsed.data.snapshot_id ?? null,
       author: parsed.data.author ?? null,
+      reason: parsed.data.reason ?? null,
     },
   });
 

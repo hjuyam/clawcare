@@ -60,6 +60,7 @@ export async function POST(req: Request) {
       config: parsed.data.config ?? {},
       base_version: parsed.data.base_version ?? null,
       author: parsed.data.author ?? null,
+      reason: parsed.data.reason ?? null,
     },
   });
 
