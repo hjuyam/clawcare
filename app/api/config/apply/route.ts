@@ -73,7 +73,7 @@ export async function POST(req: Request) {
 
   const nextConfig = parsed.data.config ?? {};
   const snap = await snapshotConfig(nextConfig, manifest, {
-    author: parsed.data.author ?? auth.session.user.name,
+    author: parsed.data.author ?? auth.session.user?.name ?? "unknown",
     reason: parsed.data.reason ?? "apply",
   });
 

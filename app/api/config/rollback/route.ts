@@ -97,7 +97,7 @@ export async function POST(req: Request) {
 
   // Rollback by creating a new snapshot (immutable history) that points to the target config.
   const snap = await snapshotConfig(loaded.config, manifest, {
-    author: parsed.data.author ?? auth.session.user.name,
+    author: parsed.data.author ?? auth.session.user?.name ?? "unknown",
     reason: parsed.data.reason ?? `rollback to ${targetVersion}`,
   });
 
