@@ -4,7 +4,7 @@ import { parseJsonBody } from "@/app/api/_lib/http";
 import { requireRole } from "@/app/api/_lib/auth";
 import { enforceSafeMode } from "@/app/api/_lib/safeMode";
 import { createAndScheduleRun } from "@/app/api/_lib/runFromRequest";
-import { loadManifest, loadConfigByVersion, snapshotConfig } from "../_utils";
+import { loadManifest, loadConfigByVersion } from "../_utils";
 
 const RollbackSchema = z
   .object({
@@ -57,14 +57,11 @@ export async function POST(req: Request) {
   const manifest = await loadManifest();
 
   // Prefer explicit target_version; keep snapshot_id as a compatibility alias (treated as a version for now).
-  let targetVersion =
-    parsed.data.target_version ?? parsed.data.snapshot_id ?? null;
+  let targetVersion = parsed.data.target_version ?? parsed.data.snapshot_id ?? null;
 
   // Fallback: rollback to previous entry.
   if (!targetVersion) {
-    const idx = manifest.entries.findIndex(
-      (e) => e.version === manifest.currentVersion,
-    );
+    const idx = manifest.entries.findIndex((e) => e.version === manifest.currentVersion);
     const prev = idx > 0 ? manifest.entries[idx - 1] : null;
     if (!prev) {
       return NextResponse.json(
@@ -95,32 +92,25 @@ export async function POST(req: Request) {
     );
   }
 
-  // Rollback by creating a new snapshot (immutable history) that points to the target config.
-  const snap = await snapshotConfig(loaded.config, manifest, {
-    author: parsed.data.author ?? auth.session.user_id ?? "unknown",
-    reason: parsed.data.reason ?? `rollback to ${targetVersion}`,
-  });
-
   const run = await createAndScheduleRun({
     type: "config.rollback",
     session: auth.session,
     reason: parsed.data.reason ?? "(no reason provided)",
     input: {
-      from_version: manifest.currentVersion,
       target_version: targetVersion,
-      new_version: snap.entry.version,
-      author: parsed.data.author ?? null,
       snapshot_id: parsed.data.snapshot_id ?? null,
+      author: parsed.data.author ?? null,
+      reason: parsed.data.reason ?? null,
     },
   });
 
+  const manifestAfter = await loadManifest();
+
   return NextResponse.json({
     status: "queued",
-    mode: "persisted",
+    mode: "inline",
     run_id: run.id,
-    current_version: snap.manifest.currentVersion,
-    new_entry: snap.entry,
-    rolled_back_from: manifest.currentVersion,
+    current_version: manifestAfter.currentVersion,
     rolled_back_to: targetVersion,
   });
 }
