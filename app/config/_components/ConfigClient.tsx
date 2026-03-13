@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type CurrentResp = {
   current_version: string;
@@ -16,16 +16,24 @@ type PreviewResp = {
   masked_next: any;
 };
 
+type VersionsResp = {
+  current_version: string;
+  entries: Array<{ version: string; created_at?: string; author?: string; reason?: string }>;
+};
+
 export function ConfigClient() {
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<CurrentResp | null>(null);
+  const [versions, setVersions] = useState<VersionsResp | null>(null);
+  const [rollbackTarget, setRollbackTarget] = useState<string>("");
+
   const [draftText, setDraftText] = useState("{}");
   const [reason, setReason] = useState("");
   const [preview, setPreview] = useState<PreviewResp | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  async function loadCurrent() {
+  const loadCurrent = useCallback(async () => {
     setLoading(true);
     setMsg(null);
     try {
@@ -40,11 +48,39 @@ export function ConfigClient() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  const loadVersions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/config/versions", { cache: "no-store" });
+      const json = (await res.json().catch(() => null)) as any;
+      if (!res.ok) {
+        // do not hard-fail the page (viewer/admin RBAC); only surface if no prior message.
+        setMsg((prev) =>
+          prev ? prev : { ok: false, text: json?.error?.message || `HTTP ${res.status}` },
+        );
+        return;
+      }
+      setVersions(json);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     void loadCurrent();
-  }, []);
+    void loadVersions();
+  }, [loadCurrent, loadVersions]);
+
+  // keep a sensible default rollback target: previous version of current
+  useEffect(() => {
+    if (!current?.current_version || !versions?.entries?.length) return;
+    const entries = versions.entries;
+    const idx = entries.findIndex((e) => e.version === current.current_version);
+    const prev = idx > 0 ? entries[idx - 1]?.version : "";
+    // only auto-set when empty or when current moved
+    setRollbackTarget((existing) => (existing ? existing : prev));
+  }, [current?.current_version, versions?.entries]);
 
   const draftJson = useMemo(() => {
     try {
@@ -106,6 +142,9 @@ export function ConfigClient() {
         return;
       }
       setMsg({ ok: true, text: `Apply queued (run_id=${json?.run_id ?? ""})` });
+      // refresh local state (manifest moves immediately on persist)
+      void loadCurrent();
+      void loadVersions();
     } finally {
       setBusy(null);
     }
@@ -119,23 +158,8 @@ export function ConfigClient() {
         setMsg({ ok: false, text: "Current version missing." });
         return;
       }
-      // Minimal UX: roll back to previous manifest version.
-      const versionsRes = await fetch("/api/config/versions", {
-        cache: "no-store",
-      });
-      const versionsJson = (await versionsRes.json().catch(() => null)) as any;
-      if (!versionsRes.ok) {
-        setMsg({
-          ok: false,
-          text: versionsJson?.error?.message || `HTTP ${versionsRes.status}`,
-        });
-        return;
-      }
-      const entries = (versionsJson?.entries ?? []) as Array<{ version: string }>;
-      const idx = entries.findIndex((e) => e.version === current.current_version);
-      const target = idx > 0 ? entries[idx - 1]?.version : null;
-      if (!target) {
-        setMsg({ ok: false, text: "No previous version to roll back to." });
+      if (!rollbackTarget) {
+        setMsg({ ok: false, text: "Please select a rollback target version." });
         return;
       }
 
@@ -143,7 +167,7 @@ export function ConfigClient() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          target_version: target,
+          target_version: rollbackTarget,
           reason: reason.trim() || "(no reason)",
           confirm: true,
         }),
@@ -154,6 +178,8 @@ export function ConfigClient() {
         return;
       }
       setMsg({ ok: true, text: `Rollback queued (run_id=${json?.run_id ?? ""})` });
+      void loadCurrent();
+      void loadVersions();
     } finally {
       setBusy(null);
     }
@@ -219,13 +245,31 @@ export function ConfigClient() {
           >
             {busy === "apply" ? "Applying…" : "Apply (confirm=true)"}
           </button>
-          <button
-            className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-900 disabled:opacity-50"
-            disabled={disabled || busy !== null}
-            onClick={() => void doRollback()}
-          >
-            {busy === "rollback" ? "Rolling back…" : "Rollback to previous"}
-          </button>
+
+          <div className="flex items-center gap-2">
+            <select
+              className="rounded-md border border-neutral-200 bg-white px-2 py-2 text-sm disabled:opacity-50"
+              disabled={disabled || busy !== null || !versions?.entries?.length}
+              value={rollbackTarget}
+              onChange={(e) => setRollbackTarget(e.target.value)}
+              title="Select a target version to rollback to"
+            >
+              <option value="">Select version…</option>
+              {(versions?.entries ?? []).map((e) => (
+                <option key={e.version} value={e.version}>
+                  {e.version}
+                  {e.version === current?.current_version ? " (current)" : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-900 disabled:opacity-50"
+              disabled={disabled || busy !== null || !rollbackTarget}
+              onClick={() => void doRollback()}
+            >
+              {busy === "rollback" ? "Rolling back…" : "Rollback"}
+            </button>
+          </div>
 
           {msg ? (
             <div className={`text-xs ${msg.ok ? "text-green-700" : "text-red-700"}`}>
@@ -237,6 +281,31 @@ export function ConfigClient() {
         <div className="mt-3 text-xs text-neutral-600">
           注意：Apply/Rollback 属于高危操作，会被 RBAC + Safe Mode 拦截；目前后端是 mock run。
         </div>
+
+        {versions?.entries?.length ? (
+          <div className="mt-4">
+            <div className="mb-2 text-xs font-medium text-neutral-900">Version history</div>
+            <div className="max-h-48 overflow-auto rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs">
+              <ul className="space-y-1">
+                {versions.entries
+                  .slice()
+                  .reverse()
+                  .map((e) => (
+                    <li key={e.version} className="flex items-center justify-between gap-3">
+                      <span className="font-mono">
+                        {e.version}
+                        {e.version === current?.current_version ? "  ← current" : ""}
+                      </span>
+                      <span className="truncate text-neutral-600">
+                        {e.author ? `by ${e.author}` : ""}
+                        {e.reason ? ` · ${e.reason}` : ""}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {preview ? (
