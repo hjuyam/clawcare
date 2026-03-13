@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { POST as APPLY } from "../apply/route";
 import { POST as ROLLBACK } from "../rollback/route";
 import { authCookieHeader } from "@/tests/_helpers/auth";
-import { loadManifest } from "../_utils";
+import { loadConfigByVersion, loadManifest } from "../_utils";
 import { getRun } from "@/app/api/_lib/runsStore";
 
 function dump(res: Response, data: any) {
@@ -33,12 +33,14 @@ describe("config apply/rollback via runs", () => {
     };
 
     const beforeManifest = await loadManifest();
+    const beforeEntries = beforeManifest.entries.length;
+    const configInput = { featureFlag: true, nested: { threshold: 7 } };
 
     const req = new Request("http://localhost/api/config/apply", {
       method: "POST",
       headers,
       body: JSON.stringify({
-        config: { featureFlag: true },
+        config: configInput,
         base_version: beforeManifest.currentVersion,
         author: "unit-test",
         reason: "apply",
@@ -56,6 +58,10 @@ describe("config apply/rollback via runs", () => {
 
     const afterManifest = await loadManifest();
     expect(afterManifest.currentVersion).not.toBe(beforeManifest.currentVersion);
+    expect(afterManifest.entries.length).toBe(beforeEntries + 1);
+
+    const loaded = await loadConfigByVersion(afterManifest.currentVersion);
+    expect(loaded?.config).toEqual(configInput);
 
     const run = await getRun(data.run_id);
     expect(run?.status).toBe("succeeded");
@@ -71,6 +77,7 @@ describe("config apply/rollback via runs", () => {
     };
 
     const manifest = await loadManifest();
+    const beforeEntries = manifest.entries.length;
     const targetVersion = manifest.entries[0]?.version ?? manifest.currentVersion;
 
     const req = new Request("http://localhost/api/config/rollback", {
@@ -95,6 +102,7 @@ describe("config apply/rollback via runs", () => {
 
     const updated = await loadManifest();
     expect(updated.currentVersion).toBe(targetVersion);
+    expect(updated.entries.length).toBe(beforeEntries);
 
     const run = await getRun(data.run_id);
     expect(run?.status).toBe("succeeded");
@@ -110,6 +118,7 @@ describe("config apply/rollback via runs", () => {
     };
 
     const beforeManifest = await loadManifest();
+    const beforeEntries = beforeManifest.entries.length;
 
     const req = new Request("http://localhost/api/config/apply", {
       method: "POST",
@@ -131,6 +140,7 @@ describe("config apply/rollback via runs", () => {
 
     const afterManifest = await loadManifest();
     expect(afterManifest.currentVersion).toBe(beforeManifest.currentVersion);
+    expect(afterManifest.entries.length).toBe(beforeEntries);
 
     const run = await getRun(data.run_id);
     expect(run?.status).toBe("failed");

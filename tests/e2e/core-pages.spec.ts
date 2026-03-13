@@ -39,6 +39,13 @@ test.describe("core pages (mock gateway)", () => {
     await expect(page.getByRole("heading", { name: "Config" })).toBeVisible();
   });
 
+  test("tasks page placeholder", async ({ page }) => {
+    await page.goto("/tasks");
+
+    await expect(page.getByRole("heading", { name: "Tasks & Runs" })).toBeVisible();
+    await expect(page.getByText("最近运行（最多 50 条）")).toBeVisible();
+  });
+
   test("security audit placeholder", async ({ page }) => {
     await page.goto("/security");
 

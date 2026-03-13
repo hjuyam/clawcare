@@ -118,6 +118,10 @@ export async function appendAuditEvent(event: AuditEvent): Promise<void> {
 export async function readAuditEvents(filters: {
   action?: string | null;
   resource_type?: string | null;
+  actor?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  limit?: number | null;
 }) {
   try {
     const data = await fs.readFile(AUDIT_LOG_PATH, "utf8");
@@ -126,12 +130,36 @@ export async function readAuditEvents(filters: {
       .filter(Boolean)
       .map((line) => JSON.parse(line));
 
-    return events.filter((event) => {
+    const startMs = filters.start_time
+      ? Date.parse(filters.start_time)
+      : Number.NaN;
+    const endMs = filters.end_time ? Date.parse(filters.end_time) : Number.NaN;
+
+    const filtered = events.filter((event) => {
       if (filters.action && event.action !== filters.action) return false;
       if (filters.resource_type && event.resource_type !== filters.resource_type)
         return false;
+      if (filters.actor) {
+        const actor = String(filters.actor);
+        if (event.actor_id !== actor && event.actor_type !== actor) return false;
+      }
+      if (!Number.isNaN(startMs) || !Number.isNaN(endMs)) {
+        const eventMs = Date.parse(event.event_time);
+        if (!Number.isNaN(startMs) && eventMs < startMs) return false;
+        if (!Number.isNaN(endMs) && eventMs > endMs) return false;
+      }
       return true;
     });
+
+    const sorted = filtered.sort((a, b) => {
+      const aMs = Date.parse(a.event_time);
+      const bMs = Date.parse(b.event_time);
+      if (Number.isNaN(aMs) || Number.isNaN(bMs)) return 0;
+      return bMs - aMs;
+    });
+
+    const limit = filters.limit && filters.limit > 0 ? filters.limit : null;
+    return limit ? sorted.slice(0, limit) : sorted;
   } catch (err: any) {
     if (err?.code === "ENOENT") return [];
     throw err;
