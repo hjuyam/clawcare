@@ -54,6 +54,12 @@ async function writeRunAudit(params: {
   await appendAuditEvent(evt);
 }
 
+// Used by the legacy/mock timer path. For M3 config runs we execute inline above,
+// so this is effectively a no-op unless we later add additional config-related run types.
+async function maybeExecuteConfigRun(_run: RunRecord) {
+  return null;
+}
+
 export async function scheduleMockExecution(run: RunRecord) {
   // NOTE: In serverless/edge runtimes, timers aren't guaranteed.
   // For M2 minimal loop we use best-effort mock execution.
