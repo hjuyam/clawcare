@@ -41,6 +41,7 @@
   - `data/manifest.json` 的 `currentVersion` 推进/回退
   - `data/snapshots/<version>.json` 写入/复用
   - `base_version` 乐观锁校验，避免覆盖
+  - rollback 支持选择目标版本（UI 可选 + API `target_version`）
 - 自动化测试覆盖：apply/rollback 落盘、base_version mismatch、失败分支
 - **验收脚本与证据链**：`docs/ACCEPTANCE_M3_CONFIG_CENTER.md`
 
