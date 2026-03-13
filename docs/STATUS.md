@@ -1,8 +1,15 @@
 # ClawCare 项目状态
 
-更新时间（UTC）：2026-03-12
+更新时间（UTC）：2026-03-13
 
-## 已完成（M1）
+## 快速入口
+- 使用指南（UI + API）：[`docs/USAGE_GUIDE.md`](./USAGE_GUIDE.md)
+- 边界与注意事项（不要过度承诺）：[`docs/BOUNDARIES_AND_GOTCHAS.md`](./BOUNDARIES_AND_GOTCHAS.md)
+- 安全验收口径（M1）：[`docs/acceptance-m1-security.md`](./acceptance-m1-security.md)
+
+---
+
+## 已完成（M1：安全基线）
 - Auth/Session
 - RBAC（admin/viewer）
 - Safe Mode（阻断高危操作）
@@ -26,7 +33,7 @@
 待补齐（不影响 v0 最小闭环，但建议作为 M2.1）：
 - Runs UI 的 E2E 合约（目前 E2E 仍以 M1 安全合约为主）
 
-## M3（Config Center）✅（可验收）
+## 已完成（M3：Config Center）✅（可验收）
 - Config Center：配置编辑（Draft JSON）→ Diff 预览（mask）→ Apply（带 confirm gate）→ 可回滚
 - apply/rollback 以 **Run** 形式执行（可追踪 + 可审计），并已具备 **真实落盘语义**：
   - `data/manifest.json` 的 `currentVersion` 推进/回退
@@ -38,8 +45,11 @@
 M3.1（审计可视化增强，已落地 MVP）：
 - `/security` 提供只读审计视图（可筛选 action/actor/time，并可链接到 runs）
 
-## 规划（M4）
-- Memory Center：记忆浏览/搜索/清理 + 安全护栏（Safe Mode 一致）
+## M4（Memory Center）✅（可验收）
+- Memory Center：记忆列表 / 详情查看 / substring 搜索（viewer+）
+- 删除 / 裁剪：admin + confirm gate，且 Safe Mode 下强制阻断
+- 输出脱敏：基础 token/secret 规则替换为 `[REDACTED]`
+- 证据链：`docs/ACCEPTANCE_M4_MEMORY_CENTER.md`
 
 ## 上线定义（阶段性）
 - M1：安全基线完成，但尚未达到完整可用闭环

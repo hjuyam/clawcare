@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { PageShell } from "@/app/_components/PageShell";
 import { AuditLogClient } from "@/app/security/_components/AuditLogClient";
 
@@ -19,7 +20,15 @@ export default function SecurityPage() {
           </ul>
         </div>
 
-        <AuditLogClient />
+        <Suspense
+          fallback={
+            <div className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-600">
+              Loading audit log…
+            </div>
+          }
+        >
+          <AuditLogClient />
+        </Suspense>
       </div>
     </PageShell>
   );

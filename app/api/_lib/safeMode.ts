@@ -28,6 +28,8 @@ export function isActionBlockedBySafeMode(action: string, confirm?: boolean) {
     "ops.restart_gateway",
     "config.apply",
     "config.rollback",
+    "memory.delete",
+    "memory.trim",
   ].includes(action);
 }
 
