@@ -4,6 +4,7 @@ import { parseJsonBody } from "@/app/api/_lib/http";
 import { requireRole } from "@/app/api/_lib/auth";
 import { enforceSafeMode } from "@/app/api/_lib/safeMode";
 import { createAndScheduleRun } from "@/app/api/_lib/runFromRequest";
+import { loadManifest, snapshotConfig } from "../_utils";
 
 const ApplySchema = z
   .object({
@@ -52,13 +53,37 @@ export async function POST(req: Request) {
     );
   }
 
+  // M3: real apply should persist a new version (snapshot + manifest update)
+  // before we queue a run for auditability/UX parity.
+  const manifest = await loadManifest();
+  const baseVersion = parsed.data.base_version ?? manifest.currentVersion;
+
+  if (baseVersion !== manifest.currentVersion) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "BASE_VERSION_MISMATCH",
+          message: `base_version=${baseVersion} does not match current_version=${manifest.currentVersion}`,
+          requestId: parsed.requestId,
+        },
+      },
+      { status: 409 },
+    );
+  }
+
+  const nextConfig = parsed.data.config ?? {};
+  const snap = await snapshotConfig(nextConfig, manifest, {
+    author: parsed.data.author ?? auth.session.user.name,
+    reason: parsed.data.reason ?? "apply",
+  });
+
   const run = await createAndScheduleRun({
     type: "config.apply",
     session: auth.session,
     reason: parsed.data.reason ?? "(no reason provided)",
     input: {
-      config: parsed.data.config ?? {},
-      base_version: parsed.data.base_version ?? null,
+      base_version: baseVersion,
+      new_version: snap.entry.version,
       author: parsed.data.author ?? null,
       reason: parsed.data.reason ?? null,
     },
@@ -66,7 +91,9 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     status: "queued",
-    mode: "mock",
+    mode: "persisted",
     run_id: run.id,
+    current_version: snap.manifest.currentVersion,
+    new_entry: snap.entry,
   });
 }
