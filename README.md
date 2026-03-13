@@ -44,15 +44,16 @@ ClawCare 解决三个核心问题：
 - mock executor：把 queued → running → succeeded 跑通（best-effort timer）
 - Diagnostics bundle（mock artifact 写入 `data/artifacts/` 并回传路径）
 
-### M3（Config Center）⚠️ 进行中（已有雏形）
+### M3（Config Center）✅
 - API：`/api/config/current|versions|preview_diff|apply|rollback`
 - UI：`/config`（Draft JSON / Preview diff / Apply / Rollback）
 - 受 RBAC + Safe Mode 约束，`apply/rollback` 有 confirm gate
+- apply/rollback 已具备 **真实落盘语义**（推进/回退 `manifest.json` + snapshots），并以 Run 记录全程
 
 ### 已知限制（请务必明确给验收/用户）
 - **Runs 目前主要是“可追踪闭环”，不是“真实执行引擎”**：executor 是 mock timer；创建 `ops.*`/`config.*` run **不会真正执行** Gateway/系统级动作（除非后续里程碑补齐 handler）。
 - **存储为文件 best-effort**：`data/*.json` / `*.jsonl` 以简单落盘为主，并发/多实例/Serverless 环境下不保证强一致。
-- **M3 apply/rollback 目前偏“排队入口”**：已具备预览/版本列表/按钮与策略护栏，但“真实落盘推进版本/回滚”的语义仍在补齐中（详见 Roadmap）。
+- **审计面板仍偏“日志为主”**：apply/rollback 的落盘与 Runs 追踪已完成，但 `/security` 的可视化仍在增强中。
 
 ---
 

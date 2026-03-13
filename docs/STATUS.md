@@ -26,13 +26,16 @@
 待补齐（不影响 v0 最小闭环，但建议作为 M2.1）：
 - Runs UI 的 E2E 合约（目前 E2E 仍以 M1 安全合约为主）
 
-## 规划（M3）
-- Config Center：配置编辑（备份→diff→应用→可回滚）+ 审计面板
+## M3（Config Center）✅
+- Config Center：配置编辑（Draft JSON）→ Diff 预览（mask）→ Apply（带 confirm gate）→ 可回滚
+- apply/rollback 以 **Run** 形式执行（可追踪 + 可审计），并已具备 **真实落盘语义**：
+  - `manifest.json` 的 `current_version` 推进/回退
+  - `snapshots/<version>.json` 写入/复用
+  - `base_version` 乐观锁校验，避免覆盖
+- 单测覆盖 apply/rollback 的版本变更、base_version 校验与失败分支
 
-进展（M3）：
-- Runs executor 支持 config.apply/config.rollback 实际落盘与回滚
-- apply/rollback 输入落盘 schema 对齐（config/base_version/target_version/author/reason）
-- 单测覆盖 apply/rollback 版本变更与 base_version 校验
+M3 尚未覆盖（不阻塞配置中心验收，但会影响“审计可视化”体验）：
+- `/security` 审计面板的可视化（目前以落盘日志为主，UI 仍在规划/增强）
 
 ## 规划（M4）
 - Memory Center：记忆浏览/搜索/清理 + 安全护栏（Safe Mode 一致）

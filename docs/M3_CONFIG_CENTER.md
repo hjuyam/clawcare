@@ -4,7 +4,7 @@
 > 
 > **边界声明（重要）**：
 > - 目前系统已具备 Config Center 的 UI 与 API 入口（current / versions / preview_diff / apply / rollback）。
-> - apply/rollback 当前以 **Runs** 的形式排队执行；部分执行语义仍处于从“mock executor”向“真实落盘语义”演进阶段。
+> - apply/rollback 以 **Runs** 的形式执行（可追踪/可审计），且已具备 **真实落盘语义**（推进/回退 manifest + snapshots）。
 > - 本文档会明确标注：**已实现（Implemented）** vs **计划（Planned）**，避免过度承诺。
 
 ## 0. 术语
@@ -74,7 +74,7 @@ curl -sS -X POST http://localhost:3000/api/config/preview_diff \
 
 权限：viewer 可读。
 
-### 2.4 POST /api/config/apply（Implemented：排队为 run；语义演进中）
+### 2.4 POST /api/config/apply（Implemented：创建 run 并执行真实落盘）
 高危操作：需要 admin + confirm。
 
 请求：
@@ -88,9 +88,9 @@ curl -sS -X POST http://localhost:3000/api/config/preview_diff \
 }
 ```
 
-响应（当前口径）：
+响应（口径）：
 ```json
-{ "status": "queued", "mode": "mock", "run_id": "..." }
+{ "status": "queued", "run_id": "..." }
 ```
 
 规则：
@@ -100,7 +100,7 @@ curl -sS -X POST http://localhost:3000/api/config/preview_diff \
 
 Safe Mode：启用时应拒绝。
 
-### 2.5 POST /api/config/rollback（Implemented：排队为 run；语义演进中）
+### 2.5 POST /api/config/rollback（Implemented：创建 run 并执行真实落盘）
 高危操作：需要 admin + confirm。
 
 请求：
@@ -113,9 +113,9 @@ Safe Mode：启用时应拒绝。
 }
 ```
 
-响应（当前口径）：
+响应（口径）：
 ```json
-{ "status": "queued", "mode": "mock", "run_id": "..." }
+{ "status": "queued", "run_id": "..." }
 ```
 
 规则：
