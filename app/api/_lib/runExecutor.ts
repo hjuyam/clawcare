@@ -195,6 +195,8 @@ export async function scheduleMockExecution(run: RunRecord) {
   setTimeout(async () => {
     try {
       const artifactPath = await maybeWriteDiagnosticsArtifact(run).catch(() => null);
+      const configResult = await maybeExecuteConfigRun(run);
+
       await updateRun(run.id, {
         status: "succeeded",
         ended_at: new Date().toISOString(),
@@ -202,10 +204,22 @@ export async function scheduleMockExecution(run: RunRecord) {
           mode: "mock",
           message: "Run finished (mock executor)",
           ...(artifactPath ? { artifact_path: artifactPath } : null),
+          ...(configResult ? { config: configResult } : null),
         },
       });
     } catch {
-      // ignore
+      try {
+        await updateRun(run.id, {
+          status: "failed",
+          ended_at: new Date().toISOString(),
+          error: {
+            code: "EXECUTION_FAILED",
+            message: "Run execution failed (mock executor)",
+          },
+        });
+      } catch {
+        // ignore
+      }
     }
   }, delayMs);
 }
