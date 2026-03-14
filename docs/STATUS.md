@@ -1,6 +1,6 @@
 # ClawCare 项目状态
 
-更新时间（UTC）：2026-03-13
+更新时间（UTC）：2026-03-14
 
 ## 快速入口
 - 用户手册（v0）：[`docs/USER_MANUAL.md`](./USER_MANUAL.md)
@@ -32,8 +32,11 @@
 - 审计：runs.create / runs.update best-effort 写入 audit log
 - Diagnostics bundle：mock artifact 写入 `data/artifacts/` 并回传路径
 
-待补齐（不影响 v0 最小闭环，但建议作为 M2.1）：
-- Runs UI 的 E2E 合约（目前 E2E 仍以 M1 安全合约为主）
+M2.1（Gateway 对接增强，已落地 MVP）：
+- `/api/runs*` 与 `/api/capabilities` 可在配置 Gateway 时转发真实数据
+- `/api/config/*` 与 `/api/ops/*` 支持 gateway 路由（保留本地语义 fallback）
+- UI 增加数据来源标识与错误提示（Gateway/本地）
+- 新增 runs 相关单测 + E2E（`runs-ui-behavior`）
 
 ## 已完成（M3：Config Center）✅（可验收）
 - Config Center：配置编辑（Draft JSON）→ Diff 预览（mask）→ Apply（带 confirm gate）→ 可回滚
