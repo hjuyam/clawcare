@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { gatewayClient } from "./openclawClient";
 import { updateRun, type RunRecord } from "./runsStore";
 import { appendAuditEvent, buildAuditEvent } from "./audit";
 import { executeConfigApply, executeConfigRollback } from "./configHandlers";
@@ -56,9 +57,7 @@ async function writeRunAudit(params: {
 
 // Used by the legacy/mock timer path. For M3 config runs we execute inline above,
 // so this is effectively a no-op unless we later add additional config-related run types.
-async function maybeExecuteConfigRun(_run: RunRecord) {
-  return null;
-}
+async function maybeExecuteConfigRun(_run: RunRecord) { return null; }
 
 export async function scheduleMockExecution(run: RunRecord) {
   // NOTE: In serverless/edge runtimes, timers aren't guaranteed.
@@ -66,6 +65,13 @@ export async function scheduleMockExecution(run: RunRecord) {
 
   // M3: config.apply / config.rollback run inline (stable, no timers)
   // IMPORTANT: this must also run in test env, otherwise config semantics are never exercised.
+  // Submit to real gateway
+  try {
+    await gatewayClient.submitRun({ id: run.id, type: run.type, params: run.params });
+  } catch (err) {
+    console.error("Gateway submitRun failed:", err);
+  }
+
   if (run.type === "config.apply" || run.type === "config.rollback") {
     await updateRun(run.id, {
       status: "running",
