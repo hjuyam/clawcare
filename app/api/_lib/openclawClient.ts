@@ -17,6 +17,15 @@ export class OpenClawClient {
     return h;
   }
 
+  async getHealth() {
+    try {
+      const res = await fetch(`${this.baseUrl}/health`, { headers: this.headers, signal: AbortSignal.timeout(2000) });
+      return { ok: res.ok, status: res.status };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
+
   async getConfig() {
     const res = await fetch(`${this.baseUrl}/config`, { headers: this.headers });
     if (!res.ok) throw new Error(`Gateway GET /config failed: ${res.statusText}`);
