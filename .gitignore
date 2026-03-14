@@ -34,3 +34,5 @@ playwright/.cache/
 
 # Daily briefs (local, not committed)
 docs/daily-brief/
+mock-gateway.log
+test-results.log
