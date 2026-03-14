@@ -5,6 +5,20 @@ import { jsonError } from "@/app/api/_lib/http";
 import { getRun } from "@/app/api/_lib/runsStore";
 import { gatewayClient, GatewayError } from "@/app/api/_lib/gatewayClient";
 
+
+  // Adapter for Gateway /api/process output
+  function parseGatewayStatus(gwData: any): { status: string, result?: string } {
+    if (!gwData || !gwData.sessionId) return { status: "failed", result: "Invalid gateway response" };
+    // Assuming gateway process returns code/exitCode for finished processes
+    if (gwData.exitCode !== undefined) {
+      return { 
+        status: gwData.exitCode === 0 ? "succeeded" : "failed",
+        result: gwData.output || "No output"
+      };
+    }
+    return { status: "running", result: gwData.output || "Running..." };
+  }
+
 export async function GET(req: Request, ctx: { params: { id: string } }) {
   const auth = await requireRole(req, "viewer", {
     action: "runs.get",
