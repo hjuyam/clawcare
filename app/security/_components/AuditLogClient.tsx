@@ -160,7 +160,7 @@ export function AuditLogClient() {
             : `Showing ${events.length} event(s)`}
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm" data-testid="audit-table">
             <thead className="bg-neutral-50 text-neutral-600">
               <tr>
                 <th className="px-3 py-2">Time (UTC)</th>
@@ -198,6 +198,9 @@ export function AuditLogClient() {
                     <tr
                       key={event.event_id}
                       className="border-t border-neutral-100"
+                      data-testid="audit-row"
+                      data-action={event.action ?? ""}
+                      data-resource-id={event.resource_id ?? ""}
                     >
                       <td className="px-3 py-2 font-mono text-xs">
                         {event.event_time}

@@ -86,12 +86,17 @@ export function RunDetailClient({ initialRunId, initialRun }: { initialRunId: st
       : null;
 
   return (
-    <div className="space-y-4 text-sm">
+    <div className="space-y-4 text-sm" data-testid="run-detail">
       <div className="rounded-xl border border-neutral-200 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-xs text-neutral-500">Run ID</div>
-            <div className="font-mono text-sm text-neutral-900">{run.id}</div>
+            <div
+              className="font-mono text-sm text-neutral-900"
+              data-testid="run-detail-id"
+            >
+              {run.id}
+            </div>
           </div>
           <StatusBadge status={run.status} />
         </div>

@@ -46,7 +46,10 @@ export function CreateRunCard() {
   const risk = RUN_TYPES.find((r) => r.type === type)?.risk;
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-5">
+    <div
+      className="rounded-xl border border-neutral-200 bg-white p-5"
+      data-testid="create-run-card"
+    >
       <div className="mb-2 text-sm font-medium text-neutral-900">创建 Run</div>
       <div className="text-xs text-neutral-600">
         M2 最小闭环：先用 mock executor 跑通“可追踪的运维动作”。高危动作仍受
@@ -58,6 +61,7 @@ export function CreateRunCard() {
           <span className="text-xs text-neutral-700">Type</span>
           <select
             className="rounded-md border border-neutral-200 bg-white px-2 py-2 text-sm"
+            data-testid="create-run-type"
             value={type}
             onChange={(e) => setType(e.target.value as any)}
           >
@@ -75,6 +79,7 @@ export function CreateRunCard() {
           </span>
           <input
             className="rounded-md border border-neutral-200 bg-white px-2 py-2 text-sm"
+            data-testid="create-run-reason"
             placeholder={risk === "high" ? "为什么要执行？" : ""}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -84,6 +89,7 @@ export function CreateRunCard() {
         <div className="flex items-center gap-3">
           <button
             className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+            data-testid="create-run-submit"
             disabled={busy}
             onClick={submit}
           >
@@ -92,6 +98,7 @@ export function CreateRunCard() {
           {result ? (
             <div
               className={`text-xs ${result.ok ? "text-green-700" : "text-red-700"}`}
+              data-testid="create-run-result"
             >
               {result.message}
             </div>

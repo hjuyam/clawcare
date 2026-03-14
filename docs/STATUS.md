@@ -4,6 +4,7 @@
 
 ## 快速入口
 - 使用指南（UI + API）：[`docs/USAGE_GUIDE.md`](./USAGE_GUIDE.md)
+- 视频讲解脚本（5~8 分钟）：[`docs/VIDEO_WALKTHROUGH_SCRIPT.md`](./VIDEO_WALKTHROUGH_SCRIPT.md)
 - 边界与注意事项（不要过度承诺）：[`docs/BOUNDARIES_AND_GOTCHAS.md`](./BOUNDARIES_AND_GOTCHAS.md)
 - 安全验收口径（M1）：[`docs/acceptance-m1-security.md`](./acceptance-m1-security.md)
 
@@ -11,7 +12,7 @@
 
 ## 已完成（M1：安全基线）
 - Auth/Session
-- RBAC（admin/viewer）
+- RBAC（admin/operator/viewer）
 - Safe Mode（阻断高危操作）
 - Policy deny 审计（best-effort）
 - /login + /api/auth/login/logout

@@ -50,7 +50,7 @@ export function RunListClient({ initialRuns }: { initialRuns: RunRecord[] }) {
 
   return (
     <div className="overflow-hidden rounded-lg border border-neutral-200">
-      <table className="w-full text-left text-sm">
+      <table className="w-full text-left text-sm" data-testid="runs-table">
         <thead className="bg-neutral-50 text-neutral-700">
           <tr>
             <th className="px-3 py-2">ID</th>
@@ -74,9 +74,18 @@ export function RunListClient({ initialRuns }: { initialRuns: RunRecord[] }) {
             </tr>
           ) : (
             runs.map((r) => (
-              <tr key={r.id} className="border-t border-neutral-200">
+              <tr
+                key={r.id}
+                className="border-t border-neutral-200"
+                data-testid="run-row"
+                data-run-id={r.id}
+              >
                 <td className="px-3 py-2 font-mono">
-                  <Link className="underline" href={`/tasks/${r.id}`}>
+                  <Link
+                    className="underline"
+                    href={`/tasks/${r.id}`}
+                    data-testid={`run-link-${r.id}`}
+                  >
                     {String(r.id).slice(0, 8)}…
                   </Link>
                 </td>
