@@ -1,3 +1,4 @@
+import { gatewayClient } from "./openclawClient";
 import { z } from "zod";
 import {
   loadManifest,
