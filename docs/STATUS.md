@@ -3,6 +3,7 @@
 更新时间（UTC）：2026-03-13
 
 ## 快速入口
+- 用户手册（v0）：[`docs/USER_MANUAL.md`](./USER_MANUAL.md)
 - 使用指南（UI + API）：[`docs/USAGE_GUIDE.md`](./USAGE_GUIDE.md)
 - 视频讲解脚本（5~8 分钟）：[`docs/VIDEO_WALKTHROUGH_SCRIPT.md`](./VIDEO_WALKTHROUGH_SCRIPT.md)
 - 边界与注意事项（不要过度承诺）：[`docs/BOUNDARIES_AND_GOTCHAS.md`](./BOUNDARIES_AND_GOTCHAS.md)
