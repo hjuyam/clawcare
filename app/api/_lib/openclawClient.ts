@@ -33,6 +33,12 @@ export class OpenClawClient {
     return res.json();
   }
 
+  async getRunStatus(id: string) {
+    const res = await fetch(`${this.baseUrl}/runs/${id}`, { headers: this.headers });
+    if (!res.ok) throw new Error(`Gateway GET /runs/${id} failed: ${res.statusText}`);
+    return res.json();
+  }
+
   async submitRun(payload: any) {
     const res = await fetch(`${this.baseUrl}/runs`, { 
       method: 'POST', 
