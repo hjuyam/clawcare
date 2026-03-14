@@ -1,0 +1,7 @@
+{
+  "id": "mem-redact-001",
+  "time": "2026-03-13T12:00:00Z",
+  "source": "test",
+  "title": "Contains secret",
+  "content": "token=sk-SECRET-123 and Bearer abcdef"
+}

@@ -12,13 +12,17 @@ export class GatewayError extends Error {
 }
 
 export function getGatewayBaseUrl(): string | null {
-  const raw = process.env.CLAWCARE_GATEWAY_BASE_URL?.trim();
+  const raw =
+    process.env.CLAWCARE_GATEWAY_BASE_URL?.trim() ??
+    process.env.OPENCLAW_GATEWAY_URL?.trim();
   if (!raw) return null;
   return raw.replace(/\/+$/, "");
 }
 
 function getAuthHeader(): string | null {
-  const token = process.env.CLAWCARE_GATEWAY_AUTH_TOKEN?.trim();
+  const token =
+    process.env.CLAWCARE_GATEWAY_AUTH_TOKEN?.trim() ??
+    process.env.OPENCLAW_GATEWAY_TOKEN?.trim();
   if (!token) return null;
   // Accept both raw token and "Bearer xxx"
   return token.toLowerCase().startsWith("bearer ") ? token : `Bearer ${token}`;
@@ -36,12 +40,21 @@ async function gwFetch(path: string, init: RequestInit = {}) {
   const auth = getAuthHeader();
   if (auth) headers.set("authorization", auth);
 
-  const res = await fetch(`${base}${path}`, {
-    ...init,
-    headers,
-    // avoid cached responses for runs listing
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      ...init,
+      headers,
+      // avoid cached responses for runs listing
+      cache: "no-store",
+    });
+  } catch (err: any) {
+    throw new GatewayError(
+      `Gateway request failed: ${err?.message ?? String(err)}`,
+      502,
+      null
+    );
+  }
 
   const text = await res.text();
   let body: any = null;
@@ -87,5 +100,34 @@ export const gatewayClient = {
 
   async getRun(id: string) {
     return gwFetch(`/runs/${encodeURIComponent(id)}`, { method: "GET" });
+  },
+
+  async getConfig() {
+    return gwFetch("/config", { method: "GET" });
+  },
+
+  async putConfig(payload: any) {
+    return gwFetch("/config", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async listConfigVersions() {
+    return gwFetch("/config/versions", { method: "GET" });
+  },
+
+  async previewConfigDiff(payload: any) {
+    return gwFetch("/config/preview_diff", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async rollbackConfig(payload: any) {
+    return gwFetch("/config/rollback", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 };

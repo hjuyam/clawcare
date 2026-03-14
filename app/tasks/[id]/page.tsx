@@ -6,8 +6,11 @@ async function fetchRun(id: string) {
   const res = await fetch(`${getBaseUrl()}/api/runs/${id}`, {
     cache: "no-store",
   });
-  if (!res.ok) return null;
-  return (await res.json()) as { run: any };
+  const json = (await res.json().catch(() => null)) as any;
+  if (!res.ok) {
+    return { run: null, error: json?.error ?? { message: `HTTP ${res.status}` }, mode: json?.mode ?? null };
+  }
+  return json as { run: any; error?: any; mode?: string };
 }
 
 export default async function RunDetailPage({ params }: { params: { id: string } }) {
@@ -15,7 +18,12 @@ export default async function RunDetailPage({ params }: { params: { id: string }
 
   return (
     <PageShell title="Run Detail" subtitle={params.id}>
-      <RunDetailClient initialRunId={params.id} initialRun={data?.run ?? null} />
+      <RunDetailClient
+        initialRunId={params.id}
+        initialRun={data?.run ?? null}
+        initialError={data?.error ?? null}
+        initialMode={data?.mode ?? null}
+      />
     </PageShell>
   );
 }

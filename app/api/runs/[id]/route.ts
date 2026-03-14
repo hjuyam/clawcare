@@ -15,7 +15,7 @@ export async function GET(req: Request, ctx: { params: { id: string } }) {
   if (gatewayClient.isEnabled()) {
     try {
       const data = await gatewayClient.getRun(ctx.params.id);
-      return NextResponse.json(data);
+      return NextResponse.json({ ...data, mode: "gateway" });
     } catch (err: any) {
       const e = err as GatewayError;
       return NextResponse.json(

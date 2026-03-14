@@ -4,6 +4,8 @@
 
 ## 快速入口
 - `USAGE_GUIDE.md`：UI 步骤 + curl 示例（建议从这里开始）
+- `ENVIRONMENT.md`：环境变量与配置说明
+- `OPERATOR_NOTES.md`：运维/部署注意事项（runbook）
 - `BOUNDARIES_AND_GOTCHAS.md`：边界/限制/哪些是 mock
 - `STATUS.md`：里程碑状态（M1/M2/M3/M4）
 

@@ -22,15 +22,27 @@ v0 能力（按模块）：
 
 ## 1) 快速开始（本地开发）
 
+建议先准备 `.env.local`（示例）：
+
+```bash
+DEV_BYPASS=1
+AUTH_USER_ID=local-admin
+AUTH_ROLE=admin
+SESSION_SECRET=dev-session-secret
+```
+
+启动：
+
 ```bash
 cd /root/aidev/clawcare
-pnpm install
-DEV_BYPASS=1 pnpm dev
+npm install
+npm run dev
 ```
 
 打开：<http://localhost:3000>
 
 > DEV_BYPASS 仅用于本地联调/验收；不要在公网部署中启用。
+> 环境变量详解见：`docs/ENVIRONMENT.md`。
 
 ---
 
@@ -67,7 +79,18 @@ DEV_BYPASS=1 pnpm dev
 
 ---
 
-## 3) 边界与注意事项（必须读）
+## 3) 运维说明（Operator Notes）
+
+- **安全边界**：UI 不直连 Gateway，所有请求经 BFF。
+- **Gateway 集成（可选）**：设置 `CLAWCARE_GATEWAY_BASE_URL` / `CLAWCARE_GATEWAY_AUTH_TOKEN` 后，`/api/capabilities` 与 `/api/runs*` 会代理到 Gateway。
+- **数据落盘**：默认在 `data/` 目录（runs/audit/config/memory/sessions），建议备份。
+- **Safe Mode + confirm gate**：高危操作必须 confirm，Safe Mode 下强制阻断。
+
+详细 runbook：`docs/OPERATOR_NOTES.md`
+
+---
+
+## 4) 边界与注意事项（必须读）
 
 - 当前存储多为本地文件（best-effort），并发/多实例不保证强一致。
 - Runs executor 在 v0 主要用于“可追踪闭环”，不等同于完整真实执行引擎。
@@ -77,7 +100,7 @@ DEV_BYPASS=1 pnpm dev
 
 ---
 
-## 4) 验收与测试入口（给验收/复现用）
+## 5) 验收与测试入口（给验收/复现用）
 
 - M1 安全验收：`docs/acceptance-m1-security.md`
 - M3 配置中心验收：`docs/ACCEPTANCE_M3_CONFIG_CENTER.md`
@@ -87,6 +110,6 @@ DEV_BYPASS=1 pnpm dev
 
 ---
 
-## 5) 视频讲解脚本（可直接照着录）
+## 6) 视频讲解脚本（可直接照着录）
 
 - `docs/VIDEO_WALKTHROUGH_SCRIPT.md`

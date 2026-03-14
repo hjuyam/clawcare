@@ -21,6 +21,21 @@ type VersionsResp = {
   entries: Array<{ version: string; created_at?: string; author?: string; reason?: string }>;
 };
 
+function formatApiError(json: any, fallback: string) {
+  const code = json?.error?.code;
+  const message = json?.error?.message || fallback;
+  if (code === "POLICY_DENIED" && /safe mode/i.test(message)) {
+    return "Safe Mode 已开启：高危操作被阻断。请前往 Security 页关闭后重试。";
+  }
+  if (code === "CONFIRM_REQUIRED") {
+    return "需要确认（confirm=true）才能执行该操作。";
+  }
+  if (code && String(code).startsWith("GATEWAY_")) {
+    return `Gateway 错误：${message}`;
+  }
+  return message;
+}
+
 export function ConfigClient() {
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<CurrentResp | null>(null);
@@ -40,7 +55,7 @@ export function ConfigClient() {
       const res = await fetch("/api/config/current", { cache: "no-store" });
       const json = (await res.json().catch(() => null)) as any;
       if (!res.ok) {
-        setMsg({ ok: false, text: json?.error?.message || `HTTP ${res.status}` });
+        setMsg({ ok: false, text: formatApiError(json, `HTTP ${res.status}`) });
         return;
       }
       setCurrent(json);
@@ -57,7 +72,7 @@ export function ConfigClient() {
       if (!res.ok) {
         // do not hard-fail the page (viewer/admin RBAC); only surface if no prior message.
         setMsg((prev) =>
-          prev ? prev : { ok: false, text: json?.error?.message || `HTTP ${res.status}` },
+          prev ? prev : { ok: false, text: formatApiError(json, `HTTP ${res.status}`) },
         );
         return;
       }
@@ -108,7 +123,7 @@ export function ConfigClient() {
       });
       const json = (await res.json().catch(() => null)) as any;
       if (!res.ok) {
-        setMsg({ ok: false, text: json?.error?.message || `HTTP ${res.status}` });
+        setMsg({ ok: false, text: formatApiError(json, `HTTP ${res.status}`) });
         return;
       }
       setPreview(json);

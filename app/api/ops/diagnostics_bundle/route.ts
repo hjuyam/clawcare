@@ -4,6 +4,7 @@ import { requireRole } from "@/app/api/_lib/auth";
 import { parseJsonBody } from "@/app/api/_lib/http";
 import { enforceSafeMode } from "@/app/api/_lib/safeMode";
 import { createAndScheduleRun } from "@/app/api/_lib/runFromRequest";
+import { gatewayClient, GatewayError } from "@/app/api/_lib/gatewayClient";
 
 const CreateSchema = z
   .object({
@@ -81,6 +82,37 @@ export async function POST(req: Request) {
       },
       { status: 409 },
     );
+  }
+
+  if (gatewayClient.isEnabled()) {
+    try {
+      const data = await gatewayClient.createRun({
+        type: "ops.diagnostics_bundle",
+        reason,
+        input: { reason },
+      });
+      const runId = (data as any)?.run?.id ?? (data as any)?.run_id ?? (data as any)?.id ?? null;
+      return NextResponse.json({
+        status: "queued",
+        mode: "gateway",
+        run_id: runId,
+        requested_at: new Date().toISOString(),
+        gateway: data,
+      });
+    } catch (err: any) {
+      const e = err as GatewayError;
+      return NextResponse.json(
+        {
+          error: {
+            code: "GATEWAY_DIAGNOSTICS_FAILED",
+            message: e?.message ?? String(err),
+            status: e?.status ?? 500,
+            details: e?.body ?? null,
+          },
+        },
+        { status: e?.status ?? 502 },
+      );
+    }
   }
 
   const run = await createAndScheduleRun({

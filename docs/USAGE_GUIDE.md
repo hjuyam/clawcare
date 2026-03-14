@@ -7,6 +7,7 @@
 > - 不负责：安装 OpenClaw Gateway；以及“真实执行引擎”（v0 里 Runs executor 仍为 mock）。
 
 相关文档：
+- 环境变量说明：[`docs/ENVIRONMENT.md`](./ENVIRONMENT.md)
 - 《边界与注意事项》：[`docs/BOUNDARIES_AND_GOTCHAS.md`](./BOUNDARIES_AND_GOTCHAS.md)
 - API 合约摘要：[`docs/api-contract.md`](./api-contract.md)
 - 项目状态：[`docs/STATUS.md`](./STATUS.md)
@@ -20,6 +21,20 @@
 - Node.js 18+ / 20+
 - npm
 
+### 环境配置（可选但推荐）
+
+本地开发建议在项目根目录创建 `.env.local`：
+
+```bash
+# .env.local
+DEV_BYPASS=1
+AUTH_USER_ID=local-admin
+AUTH_ROLE=admin
+SESSION_SECRET=dev-session-secret
+```
+
+> 生产环境务必设置 `SESSION_SECRET`，且不要开启 `DEV_BYPASS`。
+
 ### 安装与启动
 
 ```bash
@@ -31,6 +46,23 @@ npm run dev
 打开：<http://localhost:3000>
 
 > 生产/部署相关内容不在本文范围；当前更偏本地/单实例开发运行。
+
+### （可选）接入 OpenClaw Gateway
+
+设置以下环境变量即可让 `/api/capabilities` 与 `/api/runs*` 走真实 Gateway：
+
+```bash
+CLAWCARE_GATEWAY_BASE_URL=http://127.0.0.1:18789
+CLAWCARE_GATEWAY_AUTH_TOKEN=Bearer <token>
+```
+
+验证：
+
+```bash
+curl 'http://localhost:3000/api/capabilities'
+```
+
+> 未配置 Gateway 时，Runs 使用本地 mock executor，仅用于演示闭环。
 
 ---
 
@@ -96,6 +128,7 @@ Safe Mode 开启时（服务端强制）：
 5) 打开 `/tasks/<run_id>` 查看：`status`、`input`、`result/error`、`artifacts`
 
 > 当前状态流转由 **mock executor** 驱动（queued → running → succeeded），主要用于验收「可追踪闭环」。
+> 如果配置了 Gateway（见上文），`/api/runs*` 会代理到 Gateway，状态来自真实执行引擎。
 
 ### 3.3 API 示例（curl）
 

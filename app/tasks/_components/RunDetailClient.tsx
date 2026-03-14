@@ -18,7 +18,14 @@ type RunRecord = {
   error?: { code?: string; message?: string } | null;
 };
 
-type RunResponse = { run: RunRecord };
+type RunResponse = { run?: RunRecord; error?: any; mode?: string };
+
+function normalizeRun(payload: RunResponse | RunRecord | null): RunRecord | null {
+  if (!payload) return null;
+  if ((payload as RunRecord).id) return payload as RunRecord;
+  if ((payload as RunResponse).run?.id) return (payload as RunResponse).run ?? null;
+  return null;
+}
 
 function StatusBadge({ status }: { status: string }) {
   const color =
@@ -38,10 +45,23 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function RunDetailClient({ initialRunId, initialRun }: { initialRunId: string; initialRun: RunRecord | null }) {
+export function RunDetailClient({
+  initialRunId,
+  initialRun,
+  initialError,
+  initialMode,
+}: {
+  initialRunId: string;
+  initialRun: RunRecord | null;
+  initialError?: any;
+  initialMode?: string | null;
+}) {
   const [run, setRun] = useState<RunRecord | null>(initialRun);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(!initialRun);
+  const [error, setError] = useState<string | null>(
+    initialError?.message ?? null
+  );
+  const [mode, setMode] = useState<string | null>(initialMode ?? null);
+  const [loading, setLoading] = useState(!initialRun && !initialError);
 
   useEffect(() => {
     let active = true;
@@ -50,14 +70,21 @@ export function RunDetailClient({ initialRunId, initialRun }: { initialRunId: st
     const load = async () => {
       try {
         const res = await fetch(`/api/runs/${initialRunId}`, { cache: "no-store" });
-        const json = (await res.json().catch(() => null)) as RunResponse | null;
+        const json = (await res.json().catch(() => null)) as RunResponse | RunRecord | null;
         if (!active) return;
         if (!res.ok) {
-          setError(json ? `HTTP ${res.status}` : "Failed to load run.");
+          const msg = (json as RunResponse)?.error?.message
+            ? String((json as RunResponse).error.message)
+            : json
+              ? `HTTP ${res.status}`
+              : "Failed to load run.";
+          setError(msg);
+          setMode((json as RunResponse | null)?.mode ?? null);
           return;
         }
-        setRun(json?.run ?? null);
-        setError(null);
+        setRun(normalizeRun(json));
+        setMode((json as RunResponse | null)?.mode ?? null);
+        setError((json as RunResponse | null)?.error?.message ?? null);
       } finally {
         if (active) setLoading(false);
       }
@@ -77,7 +104,11 @@ export function RunDetailClient({ initialRunId, initialRun }: { initialRunId: st
   }
 
   if (!run) {
-    return <div className="text-neutral-700">Run not found.</div>;
+    return (
+      <div className="text-neutral-700">
+        {error ? `Failed to load run: ${error}` : "Run not found."}
+      </div>
+    );
   }
 
   const artifactPath =
@@ -87,6 +118,11 @@ export function RunDetailClient({ initialRunId, initialRun }: { initialRunId: st
 
   return (
     <div className="space-y-4 text-sm" data-testid="run-detail">
+      {mode ? (
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+          数据来源：{mode === "gateway" ? "OpenClaw Gateway" : "本地存储"}
+        </div>
+      ) : null}
       <div className="rounded-xl border border-neutral-200 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -115,15 +151,21 @@ export function RunDetailClient({ initialRunId, initialRun }: { initialRunId: st
           </div>
           <div>
             <div className="text-xs text-neutral-500">Created</div>
-            <div className="text-sm text-neutral-900">{run.created_at}</div>
+            <div className="text-sm text-neutral-900">
+              {run.created_at ? new Date(run.created_at).toLocaleString() : "-"}
+            </div>
           </div>
           <div>
             <div className="text-xs text-neutral-500">Started</div>
-            <div className="text-sm text-neutral-900">{run.started_at ?? "-"}</div>
+            <div className="text-sm text-neutral-900">
+              {run.started_at ? new Date(run.started_at).toLocaleString() : "-"}
+            </div>
           </div>
           <div>
             <div className="text-xs text-neutral-500">Ended</div>
-            <div className="text-sm text-neutral-900">{run.ended_at ?? "-"}</div>
+            <div className="text-sm text-neutral-900">
+              {run.ended_at ? new Date(run.ended_at).toLocaleString() : "-"}
+            </div>
           </div>
           <div>
             <div className="text-xs text-neutral-500">Reason</div>
@@ -147,7 +189,10 @@ export function RunDetailClient({ initialRunId, initialRun }: { initialRunId: st
           <div className="text-xs font-semibold text-neutral-700">Result</div>
           {artifactPath ? (
             <div className="mt-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs">
-              Artifact: <span className="font-mono">{String(artifactPath)}</span>
+              Artifact:{" "}
+              <span className="font-mono" data-testid="run-artifact-path">
+                {String(artifactPath)}
+              </span>
             </div>
           ) : null}
           <pre className="mt-3 overflow-auto rounded-lg bg-neutral-50 p-4 text-xs">

@@ -22,7 +22,7 @@ export default function OpsPage() {
           <div className="font-medium">说明</div>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>
-              当前执行器是 mock（best-effort timer）。M2 目标是把可追踪闭环跑通。
+              默认执行器为本地 mock（best-effort timer）；配置 Gateway 后会切换到真实 runs。
             </li>
             <li>
               高危动作：restart_gateway / cleanup / diagnostics_bundle，会被 RBAC +

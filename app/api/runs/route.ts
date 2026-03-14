@@ -45,8 +45,9 @@ export async function GET(req: Request) {
   if (gatewayClient.isEnabled()) {
     try {
       const data = await gatewayClient.listRuns({ limit: normalizedLimit });
-      // Expecting { runs: [...] } from gateway; if not, return raw.
-      return NextResponse.json(data);
+      // Expecting { runs: [...] } from gateway; if not, wrap defensively.
+      const runs = (data as any)?.runs ?? [];
+      return NextResponse.json({ ...data, runs, mode: "gateway" });
     } catch (err: any) {
       const e = err as GatewayError;
       return NextResponse.json(
@@ -123,7 +124,7 @@ export async function POST(req: Request) {
         reason: reason ?? null,
         input: input ?? {},
       });
-      return NextResponse.json({ ...data, requestId }, { status: 201 });
+      return NextResponse.json({ ...data, requestId, mode: "gateway" }, { status: 201 });
     } catch (err: any) {
       const e = err as GatewayError;
       return NextResponse.json(

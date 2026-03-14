@@ -7,8 +7,15 @@ async function fetchRuns() {
   const res = await fetch(`${getBaseUrl()}/api/runs?limit=50`, {
     cache: "no-store",
   });
-  if (!res.ok) return { runs: [] as any[] };
-  return (await res.json()) as { runs: any[] };
+  const json = (await res.json().catch(() => null)) as any;
+  if (!res.ok) {
+    return {
+      runs: [] as any[],
+      error: json?.error ?? { message: `HTTP ${res.status}` },
+      mode: json?.mode ?? null,
+    };
+  }
+  return json as { runs: any[]; error?: any; mode?: string };
 }
 
 export default async function TasksPage() {
@@ -27,7 +34,11 @@ export default async function TasksPage() {
           </Link>
         </div>
 
-        <RunListClient initialRuns={data.runs ?? []} />
+        <RunListClient
+          initialRuns={data.runs ?? []}
+          initialError={data.error ?? null}
+          initialMode={data.mode ?? null}
+        />
       </div>
     </PageShell>
   );
