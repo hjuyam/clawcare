@@ -10,6 +10,7 @@ import {
   type RunRecord,
 } from "@/app/api/_lib/runsStore";
 import { scheduleMockExecution } from "@/app/api/_lib/runExecutor";
+import { gatewayClient, GatewayError } from "@/app/api/_lib/gatewayClient";
 
 const CreateRunSchema = z
   .object({
@@ -39,8 +40,31 @@ export async function GET(req: Request) {
   });
   if (!auth.ok) return auth.response;
 
-  const runs = await listRuns({ limit: Number.isFinite(limit) ? limit : 50 });
-  return NextResponse.json({ runs });
+  const normalizedLimit = Number.isFinite(limit) ? limit : 50;
+
+  if (gatewayClient.isEnabled()) {
+    try {
+      const data = await gatewayClient.listRuns({ limit: normalizedLimit });
+      // Expecting { runs: [...] } from gateway; if not, return raw.
+      return NextResponse.json(data);
+    } catch (err: any) {
+      const e = err as GatewayError;
+      return NextResponse.json(
+        {
+          error: {
+            code: "GATEWAY_RUNS_LIST_FAILED",
+            message: e?.message ?? String(err),
+            status: e?.status ?? 500,
+            details: e?.body ?? null,
+          },
+        },
+        { status: e?.status ?? 502 }
+      );
+    }
+  }
+
+  const runs = await listRuns({ limit: normalizedLimit });
+  return NextResponse.json({ runs, mode: "local" });
 }
 
 export async function POST(req: Request) {
@@ -90,8 +114,35 @@ export async function POST(req: Request) {
     error: null,
   };
 
+  // If gateway integration is enabled, we still keep the same RBAC/SafeMode guardrails here,
+  // but delegate the actual execution/tracking to the Gateway.
+  if (gatewayClient.isEnabled()) {
+    try {
+      const data = await gatewayClient.createRun({
+        type,
+        reason: reason ?? null,
+        input: input ?? {},
+      });
+      return NextResponse.json({ ...data, requestId }, { status: 201 });
+    } catch (err: any) {
+      const e = err as GatewayError;
+      return NextResponse.json(
+        {
+          error: {
+            code: "GATEWAY_RUNS_CREATE_FAILED",
+            message: e?.message ?? String(err),
+            status: e?.status ?? 500,
+            details: e?.body ?? null,
+          },
+          requestId,
+        },
+        { status: e?.status ?? 502 }
+      );
+    }
+  }
+
   await createRun(run);
   await scheduleMockExecution(run);
 
-  return NextResponse.json({ run, requestId }, { status: 201 });
+  return NextResponse.json({ run, requestId, mode: "local" }, { status: 201 });
 }
