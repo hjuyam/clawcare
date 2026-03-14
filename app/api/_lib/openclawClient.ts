@@ -17,14 +17,30 @@ export class OpenClawClient {
     return h;
   }
 
-  // TODO: Implement GET /config
   async getConfig() {
-    // return fetch(`${this.baseUrl}/config`, { headers: this.headers });
+    const res = await fetch(`${this.baseUrl}/config`, { headers: this.headers });
+    if (!res.ok) throw new Error(`Gateway GET /config failed: ${res.statusText}`);
+    return res.json();
   }
 
-  // TODO: Implement POST /runs
+  async putConfig(payload: any) {
+    const res = await fetch(`${this.baseUrl}/config`, { 
+      method: 'PUT', 
+      body: JSON.stringify(payload), 
+      headers: this.headers 
+    });
+    if (!res.ok) throw new Error(`Gateway PUT /config failed: ${res.statusText}`);
+    return res.json();
+  }
+
   async submitRun(payload: any) {
-    // return fetch(`${this.baseUrl}/runs`, { method: 'POST', body: JSON.stringify(payload), headers: this.headers });
+    const res = await fetch(`${this.baseUrl}/runs`, { 
+      method: 'POST', 
+      body: JSON.stringify(payload), 
+      headers: this.headers 
+    });
+    if (!res.ok) throw new Error(`Gateway POST /runs failed: ${res.statusText}`);
+    return res.json();
   }
 }
 
