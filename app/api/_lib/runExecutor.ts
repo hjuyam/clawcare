@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { updateRun, type RunRecord } from "./runsStore";
 import { appendAuditEvent, buildAuditEvent } from "./audit";
+import { gatewayClient } from "./openclawClient";
 import { executeConfigApply, executeConfigRollback } from "./configHandlers";
 
 function isTestEnv() {
@@ -200,6 +201,17 @@ export async function scheduleMockExecution(run: RunRecord) {
 
   setTimeout(async () => {
     try {
+      // Try dispatching to real OpenClaw gateway via /api/exec
+      try {
+        await gatewayClient.submitRun({
+          command: run.type === "ops.diagnostics_bundle" ? "echo 'Generating diagnostics bundle'" : "echo 'Running generic task: ' " + run.type,
+          background: true,
+          yieldMs: 1000
+        });
+      } catch (err) {
+        console.error("Gateway dispatch failed, falling back to mock:", err);
+      }
+
       const artifactPath = await maybeWriteDiagnosticsArtifact(run).catch(() => null);
       const configResult = await maybeExecuteConfigRun(run);
 
