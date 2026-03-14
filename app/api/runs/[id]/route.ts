@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/app/api/_lib/auth";
 import { jsonError } from "@/app/api/_lib/http";
 import { getRun, updateRun } from "@/app/api/_lib/runsStore";
-import { gatewayClient } from "@/app/api/_lib/openclawClient"; from "@/app/api/_lib/runsStore";
+import { gatewayClient } from "@/app/api/_lib/openclawClient";
 
 export async function GET(req: Request, ctx: { params: { id: string } }) {
   const auth = await requireRole(req, "viewer", {
