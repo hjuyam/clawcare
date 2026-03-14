@@ -17,6 +17,15 @@ export class OpenClawClient {
     return h;
   }
 
+  async getHealth() {
+    try {
+      const res = await fetch(`${this.baseUrl}/health`, { headers: this.headers, signal: AbortSignal.timeout(2000) });
+      return { ok: res.ok, status: res.status };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
+
   async getConfig() {
     const res = await fetch(`${this.baseUrl}/config`, { headers: this.headers });
     if (!res.ok) throw new Error(`Gateway GET /config failed: ${res.statusText}`);
@@ -33,13 +42,24 @@ export class OpenClawClient {
     return res.json();
   }
 
+  async getRunStatus(id: string) {
+    // Aligning to OpenClaw Process/Poll API
+    const res = await fetch(`${this.baseUrl}/api/process`, {
+      method: "POST",
+      body: JSON.stringify({ action: "poll", sessionId: id, timeout: 0 }),
+      headers: this.headers
+    });
+    if (!res.ok) throw new Error(`Gateway Poll failed: ${res.statusText}`);
+    return res.json();
+  }
+
   async submitRun(payload: any) {
-    const res = await fetch(`${this.baseUrl}/runs`, { 
+    const res = await fetch(`${this.baseUrl}/api/exec`, { 
       method: 'POST', 
       body: JSON.stringify(payload), 
       headers: this.headers 
     });
-    if (!res.ok) throw new Error(`Gateway POST /runs failed: ${res.statusText}`);
+    if (!res.ok) throw new Error(`Gateway POST /api/exec failed: ${res.statusText}`);
     return res.json();
   }
 }
