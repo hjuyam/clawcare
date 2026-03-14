@@ -16,7 +16,10 @@ pnpm-debug.log*
 .env.*
 
 # local data (snapshots/audit/exports)
-data/
+# keep a small seeded fixture for Memory Center E2E/acceptance
+/data/*
+!/data/memory/
+!/data/memory/fixtures.json
 
 # playwright
 playwright-report/

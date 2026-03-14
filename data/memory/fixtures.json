@@ -1,0 +1,8 @@
+{
+  "source": "clawcare-fixture",
+  "notes": "This is a test fixture for Memory Center. It should be safe to ship in the repo.",
+  "example": {
+    "apiKey": "sk-THIS_SHOULD_GET_REDACTED_1234567890",
+    "token": "token=THIS_SHOULD_GET_REDACTED_1234567890"
+  }
+}
