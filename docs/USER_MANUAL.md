@@ -82,7 +82,9 @@ npm run dev
 ## 3) 运维说明（Operator Notes）
 
 - **安全边界**：UI 不直连 Gateway，所有请求经 BFF。
-- **Gateway 集成（可选）**：设置 `CLAWCARE_GATEWAY_BASE_URL` / `CLAWCARE_GATEWAY_AUTH_TOKEN` 后，`/api/capabilities` 与 `/api/runs*` 会代理到 Gateway。
+- **Gateway 集成（可选）**：
+  - HTTP 模式：设置 `CLAWCARE_GATEWAY_BASE_URL` / `CLAWCARE_GATEWAY_AUTH_TOKEN` 后，`/api/capabilities` 与 `/api/runs*` 会代理到 Gateway。
+  - **WS 模式（推荐本机）**：设置 `CLAWCARE_GATEWAY_MODE=ws` + `CLAWCARE_GATEWAY_WS_URL` + `CLAWCARE_GATEWAY_AUTH_TOKEN`，Runs 列表将映射到 `cron.runs`。
 - **数据落盘**：默认在 `data/` 目录（runs/audit/config/memory/sessions），建议备份。
 - **Safe Mode + confirm gate**：高危操作必须 confirm，Safe Mode 下强制阻断。
 

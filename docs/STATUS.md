@@ -31,6 +31,7 @@
 - 执行器：内置 mock executor（best-effort timer）
 - 审计：runs.create / runs.update best-effort 写入 audit log
 - Diagnostics bundle：mock artifact 写入 `data/artifacts/` 并回传路径
+- **WS Gateway 模式（新增）**：Runs 列表可映射 `cron.runs`，详情可展示 summary/links
 
 M2.1（Gateway 对接增强，已落地 MVP）：
 - `/api/runs*` 与 `/api/capabilities` 可在配置 Gateway 时转发真实数据
