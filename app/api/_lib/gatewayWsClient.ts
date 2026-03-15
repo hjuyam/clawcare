@@ -73,10 +73,10 @@ async function connect(ws: WebSocket) {
               permissions: {},
               auth: { token },
               client: {
-                id: "clawcare",
+                id: "cli",
                 version: "0.1.0",
                 platform: "server",
-                mode: "operator",
+                mode: "cli",
               },
             },
           };
