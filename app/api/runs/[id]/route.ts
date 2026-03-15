@@ -46,7 +46,7 @@ export async function GET(req: Request, ctx: { params: { id: string } }) {
       requested_by: { user_id: "cron", role: "system", session_id: entry.jobId },
       reason: entry.summary ? String(entry.summary).slice(0, 120) : null,
       input: { jobId },
-      result: entry,
+      result: { ...entry, summary: entry.summary ?? null, links: entry.summary ? String(entry.summary).match(/https?:\/\/\S+/g) ?? [] : [] },
       error: entry.status && entry.status !== "ok" ? { code: entry.status } : null,
     };
     return NextResponse.json({ run, mode: "gateway-ws" });

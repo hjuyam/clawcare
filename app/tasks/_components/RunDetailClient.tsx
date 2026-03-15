@@ -195,6 +195,11 @@ export function RunDetailClient({
               </span>
             </div>
           ) : null}
+          {run.result && typeof run.result === "object" && (run.result as any).summary ? (
+            <div className="mt-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
+              {(run.result as any).summary}
+            </div>
+          ) : null}
           <pre className="mt-3 overflow-auto rounded-lg bg-neutral-50 p-4 text-xs">
             {JSON.stringify(run.result, null, 2)}
           </pre>

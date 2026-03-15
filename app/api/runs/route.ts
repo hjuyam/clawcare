@@ -79,7 +79,7 @@ export async function GET(req: Request) {
           requested_by: { user_id: "cron", role: "system", session_id: job.id },
           reason: entry.summary ? String(entry.summary).slice(0, 120) : null,
           input: { job },
-          result: entry,
+          result: { ...entry, summary: entry.summary ?? null, links: entry.summary ? String(entry.summary).match(/https?:\/\/\S+/g) ?? [] : [] },
           error: entry.status && entry.status !== "ok" ? { code: entry.status } : null,
         });
       }
