@@ -19,6 +19,17 @@ export function getGatewayBaseUrl(): string | null {
   return raw.replace(/\/+$/, "");
 }
 
+function normalizeBasePath(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "/") return "";
+  return "/" + trimmed.replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+export function getGatewayBasePath(): string {
+  const raw = process.env.CLAWCARE_GATEWAY_BASE_PATH?.trim();
+  return raw ? normalizeBasePath(raw) : "";
+}
+
 function getAuthHeader(): string | null {
   const token =
     process.env.CLAWCARE_GATEWAY_AUTH_TOKEN?.trim() ??
@@ -26,6 +37,49 @@ function getAuthHeader(): string | null {
   if (!token) return null;
   // Accept both raw token and "Bearer xxx"
   return token.toLowerCase().startsWith("bearer ") ? token : `Bearer ${token}`;
+}
+
+let cachedBasePath: string | null = null;
+let detectingBasePath: Promise<string> | null = null;
+
+async function detectGatewayBasePath(base: string) {
+  const candidates = ["", "/api", "/v1", "/gateway", "/oc/api"];
+  const headers = new Headers();
+  headers.set("accept", "application/json");
+  const auth = getAuthHeader();
+  if (auth) headers.set("authorization", auth);
+
+  for (const prefix of candidates) {
+    const url = `${base}${prefix}/runs?limit=1`;
+    try {
+      const res = await fetch(url, { method: "GET", headers, cache: "no-store" });
+      if (res.status !== 404) {
+        return prefix;
+      }
+    } catch {
+      // ignore and continue
+    }
+  }
+  return "";
+}
+
+function isTestEnv() {
+  return process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
+}
+
+async function resolveGatewayBasePath(base: string) {
+  const envPath = getGatewayBasePath();
+  if (envPath) return envPath;
+  if (isTestEnv()) return "";
+  if (cachedBasePath !== null) return cachedBasePath;
+  if (!detectingBasePath) {
+    detectingBasePath = detectGatewayBasePath(base).then((path) => {
+      cachedBasePath = path;
+      detectingBasePath = null;
+      return path;
+    });
+  }
+  return detectingBasePath;
 }
 
 async function gwFetch(path: string, init: RequestInit = {}) {
@@ -42,7 +96,8 @@ async function gwFetch(path: string, init: RequestInit = {}) {
 
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, {
+    const prefix = await resolveGatewayBasePath(base);
+    res = await fetch(`${base}${prefix}${path}`, {
       ...init,
       headers,
       // avoid cached responses for runs listing
