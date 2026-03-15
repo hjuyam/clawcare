@@ -64,6 +64,24 @@ curl 'http://localhost:3000/api/capabilities'
 
 > 未配置 Gateway 时，Runs 使用本地 mock executor，仅用于演示闭环。
 
+### （可选）WS Gateway 模式（推荐）
+
+当本机 Gateway 仅提供 WebSocket 控制平面时：
+
+```bash
+export CLAWCARE_GATEWAY_MODE=ws
+export CLAWCARE_GATEWAY_WS_URL=ws://127.0.0.1:18789
+export CLAWCARE_GATEWAY_AUTH_TOKEN=<your-token>
+```
+
+验证（示例返回截断）：
+```
+{"ok":true,"payload":{"jobs":[{"id":"<job-id>","name":"..."}]}}
+```
+```
+{"ok":true,"payload":{"entries":[{"jobId":"<job-id>","status":"ok","summary":"..."}]}}
+```
+
 ---
 
 ## 2) 登录与角色（Auth / RBAC / Safe Mode）
