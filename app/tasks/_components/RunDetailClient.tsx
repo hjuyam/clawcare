@@ -200,6 +200,20 @@ export function RunDetailClient({
               {(run.result as any).summary}
             </div>
           ) : null}
+          {run.result && typeof run.result === "object" && Array.isArray((run.result as any).links) && (run.result as any).links.length > 0 ? (
+            <div className="mt-3 rounded-md border border-neutral-200 bg-white px-3 py-2 text-xs">
+              <div className="mb-1 text-[11px] font-semibold uppercase text-neutral-500">Links</div>
+              <ul className="list-inside list-disc space-y-1">
+                {(run.result as any).links.map((link: string) => (
+                  <li key={link}>
+                    <a className="text-blue-600 underline" href={link} target="_blank" rel="noreferrer">
+                      {link}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <pre className="mt-3 overflow-auto rounded-lg bg-neutral-50 p-4 text-xs">
             {JSON.stringify(run.result, null, 2)}
           </pre>

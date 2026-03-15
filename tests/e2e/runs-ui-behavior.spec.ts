@@ -36,7 +36,12 @@ test.describe("runs UI behaviors", () => {
             requested_by: { user_id: "e2e-viewer", role: "viewer" },
             reason: "artifact smoke",
             input: { payload: "demo" },
-            result: { artifact_path: "/tmp/artifact.json", ok: true },
+            result: {
+              artifact_path: "/tmp/artifact.json",
+              ok: true,
+              links: ["https://github.com/hjuyam/clawcare"],
+              summary: "Links: https://github.com/hjuyam/clawcare",
+            },
             error: null,
           },
         }),
@@ -51,5 +56,6 @@ test.describe("runs UI behaviors", () => {
       "/tmp/artifact.json"
     );
     await expect(page.getByText("succeeded", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "https://github.com/hjuyam/clawcare" })).toBeVisible();
   });
 });
