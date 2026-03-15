@@ -42,8 +42,19 @@ SESSION_SECRET=dev-session-secret
 
 | 变量 | 作用 | 示例 |
 | --- | --- | --- |
-| `CLAWCARE_GATEWAY_BASE_URL` | Gateway 基础地址 | `http://127.0.0.1:18789` |
+| `CLAWCARE_GATEWAY_BASE_URL` | Gateway HTTP 基础地址 | `http://127.0.0.1:18789` |
 | `CLAWCARE_GATEWAY_AUTH_TOKEN` | Gateway 认证 token | `Bearer xxx` 或 `xxx` |
+| `CLAWCARE_GATEWAY_BASE_PATH` | HTTP API 前缀（可选） | `/api` / `/v1` |
+
+### WS 模式（推荐用于本机 Gateway）
+
+OpenClaw Gateway 原生是 **WebSocket 控制平面**，如果没有暴露 `/runs` HTTP API，可用 WS 模式：
+
+| 变量 | 作用 | 示例 |
+| --- | --- | --- |
+| `CLAWCARE_GATEWAY_MODE` | `ws` 启用 WS RPC | `ws` |
+| `CLAWCARE_GATEWAY_WS_URL` | Gateway WS 地址 | `ws://127.0.0.1:18789` |
+| `CLAWCARE_GATEWAY_SCOPES` | 连接 scopes（逗号分隔） | `operator.read,operator.write` |
 
 **注意**：UI 不直连 Gateway，所有请求走 BFF。
 

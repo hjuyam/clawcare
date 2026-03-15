@@ -11,6 +11,7 @@ import {
 } from "@/app/api/_lib/runsStore";
 import { scheduleMockExecution } from "@/app/api/_lib/runExecutor";
 import { gatewayClient, GatewayError } from "@/app/api/_lib/gatewayClient";
+import { gatewayRpc, gatewayWsEnabled } from "@/app/api/_lib/gatewayWsClient";
 
 const CreateRunSchema = z
   .object({
@@ -41,6 +42,50 @@ export async function GET(req: Request) {
   if (!auth.ok) return auth.response;
 
   const normalizedLimit = Number.isFinite(limit) ? limit : 50;
+
+  const wsMode = process.env.CLAWCARE_GATEWAY_MODE === "ws";
+
+  if (wsMode && gatewayWsEnabled()) {
+    // WS gateway mode: map cron.runs to ClawCare runs list
+    const jobs = await gatewayRpc<any>("cron.list", {});
+    if (!jobs.ok) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "GATEWAY_WS_CRON_LIST_FAILED",
+            message: jobs.error?.message ?? "Gateway WS error",
+          },
+        },
+        { status: 502 }
+      );
+    }
+
+    const runs: any[] = [];
+    const entries = jobs.payload?.jobs ?? [];
+    for (const job of entries) {
+      const res = await gatewayRpc<any>("cron.runs", {
+        jobId: job.id,
+        limit: Math.min(normalizedLimit, 5),
+      });
+      if (!res.ok) continue;
+      for (const entry of res.payload?.entries ?? []) {
+        runs.push({
+          id: `${entry.jobId}:${entry.ts}`,
+          type: `cron.${job.name ?? job.id}`,
+          status: entry.status ?? entry.action ?? "unknown",
+          created_at: new Date(entry.runAtMs ?? entry.ts ?? Date.now()).toISOString(),
+          started_at: null,
+          ended_at: null,
+          requested_by: { user_id: "cron", role: "system", session_id: job.id },
+          reason: entry.summary ? String(entry.summary).slice(0, 120) : null,
+          input: { job },
+          result: entry,
+          error: entry.status && entry.status !== "ok" ? { code: entry.status } : null,
+        });
+      }
+    }
+    return NextResponse.json({ runs, mode: "gateway-ws" });
+  }
 
   if (gatewayClient.isEnabled()) {
     try {
